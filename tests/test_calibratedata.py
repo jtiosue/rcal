@@ -1,5 +1,6 @@
 from rcal import CalibrateData
 import random
+import numpy as np
 
 
 def test_simple_cases():
@@ -52,6 +53,24 @@ def test_simple_cases_1():
     cd.average_daily_calibrated_ratings()
     cd.improvement_rates()
     cd.average_daily_calibrated_ratings_with_improvement()
+
+
+def test_single_day():
+
+    # when there's only a single day of data, alpha's should just be set to 0
+    data = {
+        ('r1', 'p1', 0): 1,
+        ('r2', 'p1', 0): 2,
+        ('r1', 'p2', 0): 3,
+        ('r2', 'p2', 0): 2
+    }
+
+    cb = CalibrateData(data)
+    cb.calibrate().rescale()
+    assert np.allclose(
+        list(cb.improvement_rates().values()),
+        [0.] * len(cb.P)
+    )
 
 
 def test_large_case():

@@ -175,12 +175,21 @@ def generate_matrix(data, indices, rating_delta=1., lam=1.):
                 ] -= (2 / N) * (d2 - d1)
 
 
-    # get rid of singular behavior of A
+    # get rid of singular behavior of A wrt b
     # remove equation for b0 and replace with the condition hat
     # the first b is zero
     for i in indices.values():
         A[len(R), i] = 0.
     A[len(R), len(R)] = 1.
+
+    # get rid of singular behavior of A wrt to alpha
+    # if a person only has one day of rating
+    for p in P:
+        if len(set(d for (_, d) in P[p])) == 1:
+            row = indices[('alpha', p)]
+            for col in indices.values():
+                A[row, col] = 0.
+            A[row, row] = 1.
 
     return A, c
 
