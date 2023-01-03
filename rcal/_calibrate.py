@@ -1,20 +1,19 @@
 # from ._c_code import c_generate_matrix as generate_matrix
+import numpy as np
 
-#### OLD #####
 
-delta = lambda x, y: float(x == y)
-
-def generate_matrix(data, indices, deltay=1, final_day=0, lam=1):
+def generate_matrix(data, indices, rating_delta=1., lam=1.):
     """
 
     data is a dictionary. The keys are tuples (r,p,d) corresponding to
     a reviewer r, a person p, and the day of the rating d. The values
     are the corresponding rating of the person on that day by the reviewer.
 
-    deltay is the range of the allowed ratings. E.g. for 1 through 5 stars,
-    deltay = 5-1 = 4.
+    indices is a dictionary mapping parameters to unique integer indices. keys are
+    ('a', r), ('b', r), and ('alpha', p), for reviewers r and people p.
 
-    final_day is the last day that ratings are being taken.
+    rating_delta is the range of the allowed ratings. E.g. for 1 through 5 stars,
+    rating_delta = 5-1 = 4.
 
     lam is the multiplier lambda from the paper. We guess that lamda = 1 is the best.
 
@@ -26,23 +25,20 @@ def generate_matrix(data, indices, deltay=1, final_day=0, lam=1):
 
     """
 
-    P = set(x[1] for x in data)
+    # P = set(x[1] for x in data)
     R = set(x[0] for x in data)
-    # D = set(x[2] for x in data)
 
-    N = len(set(
-        (p1, r1, d1, r2, d2)
-        for (r1, p1, d1) in data
-        for (r2, p2, d2) in data
-        if p1 == p2
-    ))
+    P = {}
+    for (r, p, d) in data:
+        P.setdefault(p, set()).add((r, d))
 
-    # indices = {}
-    # for i, r in enumerate(R):
-    #     indices[('a', r)] = i
-    #     indices[('b', r)] = i + len(R)
-    # for i, p in enumerate(P):
-    #     indices[('alpha', p)] = i + 2 * len(R)
+    # N = len(set(
+    #     (p1, r1, d1, r2, d2)
+    #     for (r1, p1, d1) in data
+    #     for (r2, p2, d2) in data
+    #     if p1 == p2
+    # ))
+    N = sum([len(P[p])**2 for p in P])
 
     A = np.zeros((len(indices), len(indices)))
     c = np.zeros(len(indices))
@@ -53,78 +49,17 @@ def generate_matrix(data, indices, deltay=1, final_day=0, lam=1):
         A[
             indices[('a', r)],
             indices[('a', r)]
-        ] += (2 * lam / len(R)) * deltay**2
+        ] += (2 * lam / len(R)) * rating_delta**2
         c[
             indices[('a', r)]
-        ] += (2 * lam / len(R)) * deltay
-        
-        for (r1, p, d1) in data:
-            for (r2, p2, d2) in data:
-                if p2 == p:
-                    A[
-                        indices[('a', r)],
-                        indices[('a', r1)]
-                    ] += (2 / N) * (
-                        delta(r, r1) * data[(r1, p, d1)] - delta(r, r2) * data[(r2, p, d2)]
-                    ) * data[(r1, p, d1)]
-                    A[
-                        indices[('a', r)],
-                        indices[('a', r2)]
-                    ] -= (2 / N) * (
-                        delta(r, r1) * data[(r1, p, d1)] - delta(r, r2) * data[(r2, p, d2)]
-                    ) * data[(r2, p, d2)]
-                    A[
-                        indices[('a', r)],
-                        indices[('b', r1)]
-                    ] += (2 / N) * (
-                        delta(r, r1) * data[(r1, p, d1)] - delta(r, r2) * data[(r2, p, d2)]
-                    )
-                    A[
-                        indices[('a', r)],
-                        indices[('b', r2)]
-                    ] -= (2 / N) * (
-                        delta(r, r1) * data[(r1, p, d1)] - delta(r, r2) * data[(r2, p, d2)]
-                    )
-                    A[
-                        indices[('a', r)],
-                        indices[('alpha', p)]
-                    ] += (2 / N) * (
-                        delta(r, r1) * data[(r1, p, d1)] - delta(r, r2) * data[(r2, p, d2)]
-                    ) * (d2 - d1)
+        ] += (2 * lam / len(R)) * rating_delta
 
+    
+    for p in P:
+        for (r1, d1) in P[p]:
+            for (r2, d2) in P[p]:
 
-    # derivatives wrt br
-    for r in R:
-
-        for (r1, p, d1) in data:
-            for (r2, p2, d2) in data:
-                if p2 == p:
-                    A[
-                        indices[('b', r)],
-                        indices[('a', r1)]
-                    ] += (2 / N) * (delta(r, r1) - delta(r, r2)) * data[(r1, p, d1)]
-                    A[
-                        indices[('b', r)],
-                        indices[('a', r2)]
-                    ] -= (2 / N) * (delta(r, r1) - delta(r, r2)) * data[(r2, p, d2)]
-                    A[
-                        indices[('b', r)],
-                        indices[('b', r1)]
-                    ] += (2 / N) * (delta(r, r1) - delta(r, r2))
-                    A[
-                        indices[('b', r)],
-                        indices[('b', r2)]
-                    ] -= (2 / N) * (delta(r, r1) - delta(r, r2))
-                    A[
-                        indices[('b', r)],
-                        indices[('alpha', p)]
-                    ] += (2 / N) * (delta(r, r1) - delta(r, r2)) * (d2 - d1)
-
-
-    # derivatives wrt alphap
-    for (r1, p, d1) in data:
-        for (r2, p2, d2) in data:
-            if p2 == p:
+                # derivatives wrt alphap
                 A[
                     indices[('alpha', p)],
                     indices[('a', r1)]
@@ -146,6 +81,100 @@ def generate_matrix(data, indices, deltay=1, final_day=0, lam=1):
                     indices[('alpha', p)]
                 ] += (2 / N) * (d2 - d1)**2
 
+
+                # derivative wrt ar
+                A[
+                    indices[('a', r1)],
+                    indices[('a', r1)]
+                ] += (2 / N) * data[(r1, p, d1)] * data[(r1, p, d1)]
+                A[
+                    indices[('a', r2)],
+                    indices[('a', r1)]
+                ] -= (2 / N) * data[(r2, p, d2)] * data[(r1, p, d1)]
+                A[
+                    indices[('a', r1)],
+                    indices[('a', r2)]
+                ] -= (2 / N) * data[(r1, p, d1)] * data[(r2, p, d2)]
+                A[
+                    indices[('a', r2)],
+                    indices[('a', r2)]
+                ] += (2 / N) * data[(r2, p, d2)] * data[(r2, p, d2)]
+
+                A[
+                    indices[('a', r1)],
+                    indices[('b', r1)]
+                ] += (2 / N) * data[(r1, p, d1)]
+                A[
+                    indices[('a', r2)],
+                    indices[('b', r1)]
+                ] -= (2 / N) * data[(r2, p, d2)]
+                A[
+                    indices[('a', r1)],
+                    indices[('b', r2)]
+                ] -= (2 / N) * data[(r1, p, d1)]
+                A[
+                    indices[('a', r2)],
+                    indices[('b', r2)]
+                ] += (2 / N) * data[(r2, p, d2)]
+
+                A[
+                    indices[('a', r1)],
+                    indices[('alpha', p)]
+                ] += (2 / N) * data[(r1, p, d1)] * (d2 - d1)
+                A[
+                    indices[('a', r2)],
+                    indices[('alpha', p)]
+                ] -= (2 / N) * data[(r2, p, d2)] * (d2 - d1)
+
+
+                # derivatives wrt br
+                    
+                A[
+                    indices[('b', r1)],
+                    indices[('a', r1)]
+                ] += (2 / N) * data[(r1, p, d1)]
+                A[
+                    indices[('b', r2)],
+                    indices[('a', r1)]
+                ] -= (2 / N) * data[(r1, p, d1)]
+
+                A[
+                    indices[('b', r1)],
+                    indices[('a', r2)]
+                ] -= (2 / N) * data[(r2, p, d2)]
+                A[
+                    indices[('b', r2)],
+                    indices[('a', r2)]
+                ] += (2 / N) * data[(r2, p, d2)]
+
+                A[
+                    indices[('b', r1)],
+                    indices[('b', r1)]
+                ] += (2 / N)
+                A[
+                    indices[('b', r2)],
+                    indices[('b', r1)]
+                ] -= (2 / N)
+
+                A[
+                    indices[('b', r1)],
+                    indices[('b', r2)]
+                ] -= (2 / N)
+                A[
+                    indices[('b', r2)],
+                    indices[('b', r2)]
+                ] += (2 / N)
+
+                A[
+                    indices[('b', r1)],
+                    indices[('alpha', p)]
+                ] += (2 / N) * (d2 - d1)
+                A[
+                    indices[('b', r2)],
+                    indices[('alpha', p)]
+                ] -= (2 / N) * (d2 - d1)
+
+
     # get rid of singular behavior of A
     # remove equation for b0 and replace with the condition hat
     # the first b is zero
@@ -156,16 +185,12 @@ def generate_matrix(data, indices, deltay=1, final_day=0, lam=1):
     return A, c
 
 
-###########
-
-
-
-import numpy as np
 
 
 class CalibrateData:
     
-    def __init__(self, data, deltay=None, final_day=None):
+    def __init__(self, data, rating_delta=None):
+        
         self.P, self.R, self.D = set(), set(), set()
         self.data, self.calibrated_data = {}, {}
 
@@ -176,8 +201,7 @@ class CalibrateData:
             self.R.add(x[0])
             self.D.add(x[2])
 
-        self.deltay = deltay if deltay is not None else max(self.data.values()) - min(self.data.values())
-        self.final_day = final_day if final_day is not None else max(self.D) - min(self.D)
+        self.rating_delta = rating_delta if rating_delta is not None else max(self.data.values()) - min(self.data.values())
 
         self.indices, self.parameters = {}, {}
         for i, r in enumerate(self.R):
@@ -191,7 +215,7 @@ class CalibrateData:
 
 
     def calibrate(self, lam=1.):
-        z = np.linalg.solve(*generate_matrix(self.data, self.indices, self.deltay, self.final_day, lam))
+        z = np.linalg.solve(*generate_matrix(self.data, self.indices, self.rating_delta, lam))
 
         self.parameters = {}
         for r in self.R:
@@ -206,6 +230,8 @@ class CalibrateData:
             )
             for ((r, p, d), rating) in self.data.items()
         }
+
+        return self
 
     def rescale(self, lower=0., upper=1.):
 
@@ -225,34 +251,36 @@ class CalibrateData:
         for p in self.P:
             self.parameters[('alpha', p)] *= ran / (y1 - y0)
 
-    def get_improvement_rate(self, p):
+        return self
+
+    def improvement_rate(self, p):
         return self.parameters[('alpha', p)]
 
-    def get_reviewer_scale(self, r):
+    def reviewer_scale(self, r):
         return self.parameters[('a', r)]
 
-    def get_reviewer_offset(self, r):
+    def reviewer_offset(self, r):
         return self.parameters[('b', r)]
 
-    def get_calibrated_rating(self, r, p, d):
+    def calibrated_rating(self, r, p, d):
         return self.calibrated_data[(r, p, d)]
 
-    def get_uncalibrated_rating(self, r, p, d):
+    def uncalibrated_rating(self, r, p, d):
         return self.data[(r, p, d)]
 
-    def get_improvement_rates(self):
+    def improvement_rates(self):
         return {p: self.parameters[('alpha', p)] for p in self.P}
 
-    def get_reviewer_scales(self):
+    def reviewer_scales(self):
         return {r: self.parameters[('a', r)] for r in self.R}
 
-    def get_reviewer_offsets(self):
+    def reviewer_offsets(self):
         return {r: self.parameters[('b', r)] for r in self.R}
 
-    def get_calibrated_ratings(self):
+    def calibrated_ratings(self):
         return self.calibrated_data.copy()
 
-    def get_uncalibrated_ratings(self):
+    def uncalibrated_ratings(self):
         return self.data.copy()
 
     def all_reviews(self):
@@ -333,4 +361,46 @@ class CalibrateData:
             ratings.setdefault(r, []).append(y)
         for r in ratings.keys():
             ratings[r] = sum(ratings[r]) / len(ratings[r])
+        return ratings
+
+    def average_daily_calibrated_ratings_with_improvement(self):
+        ratings = {}
+        for ((_, p, d), y) in self.calibrated_data.items():
+            ratings.setdefault(p, {}).setdefault(d, []).append(
+                y + self.parameters[('alpha', p)] * (max(self.D) - d)
+            )
+        for p in ratings.keys():
+            for d in ratings[p].keys():
+                ratings[p][d] = sum(ratings[p][d]) / len(ratings[p][d])
+        return ratings
+
+    def average_daily_uncalibrated_ratings_with_improvement(self):
+        ratings = {}
+        for ((_, p, d), y) in self.data.items():
+            ratings.setdefault(p, {}).setdefault(d, []).append(
+                y + self.parameters[('alpha', p)] * (max(self.D) - d)
+            )
+        for p in ratings.keys():
+            for d in ratings[p].keys():
+                ratings[p][d] = sum(ratings[p][d]) / len(ratings[p][d])
+        return ratings
+
+    def average_calibrated_ratings_with_improvement(self):
+        ratings = {}
+        for ((_, p, d), y) in self.calibrated_data.items():
+            ratings.setdefault(p, []).append(
+                y + self.parameters[('alpha', p)] * (max(self.D) - d)
+            )
+        for p in ratings.keys():
+            ratings[p] = sum(ratings[p]) / len(ratings[p])
+        return ratings
+
+    def average_uncalibrated_ratings_with_improvement(self):
+        ratings = {}
+        for ((_, p, d), y) in self.data.items():
+            ratings.setdefault(p, []).append(
+                y + self.parameters[('alpha', p)] * (max(self.D) - d)
+            )
+        for p in ratings.keys():
+            ratings[p] = sum(ratings[p]) / len(ratings[p])
         return ratings
