@@ -65,7 +65,7 @@ def test_large_case():
                 data[(r, p, d)] = random.random()
     
     cd = CalibrateData(data)
-    assert cd.D == set(range(4))
+    assert cd.D == set(range(8))
 
     cd.calibrate().rescale()
 
