@@ -1,0 +1,7 @@
+numpy
+pytest-codestyle==1.4.0
+pytest-cov==2.7.1
+pytest==4.3.1
+setuptools
+twine
+wheel
