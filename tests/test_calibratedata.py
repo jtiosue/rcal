@@ -3,7 +3,7 @@ import random
 
 def test_simple_cases():
 
-	data = {
+    data = {
         ('r1', 'p1', 0): 2,
         ('r1', 'p1', 1): 4,
         ('r1', 'p1', 2): 5,
