@@ -4,7 +4,7 @@
 
 delta = lambda x, y: float(x == y)
 
-def generate_matrix(data, indices, deltay=1, deltad=0, lam=1):
+def generate_matrix(data, indices, deltay=1, final_day=0, lam=1):
     """
 
     data is a dictionary. The keys are tuples (r,p,d) corresponding to
@@ -14,8 +14,7 @@ def generate_matrix(data, indices, deltay=1, deltad=0, lam=1):
     deltay is the range of the allowed ratings. E.g. for 1 through 5 stars,
     deltay = 5-1 = 4.
 
-    deltad is the number of days that ratings are being taken minus 1.
-    ie if we take ratings on day 1, 2, and 3, then deltad = 3-1 = 2.
+    final_day is the last day that ratings are being taken.
 
     lam is the multiplier lambda from the paper. We guess that lamda = 1 is the best.
 
@@ -166,7 +165,7 @@ import numpy as np
 
 class CalibrateData:
     
-    def __init__(self, data, deltay=None, deltad=None):
+    def __init__(self, data, deltay=None, final_day=None):
         self.P, self.R, self.D = set(), set(), set()
         self.data, self.calibrated_data = {}, {}
 
@@ -178,7 +177,7 @@ class CalibrateData:
             self.D.add(x[2])
 
         self.deltay = deltay if deltay is not None else max(self.data.values()) - min(self.data.values())
-        self.deltad = deltad if deltad is not None else max(self.D) - min(self.D)
+        self.final_day = final_day if final_day is not None else max(self.D) - min(self.D)
 
         self.indices, self.parameters = {}, {}
         for i, r in enumerate(self.R):
@@ -192,7 +191,7 @@ class CalibrateData:
 
 
     def calibrate(self, lam=1.):
-        z = np.linalg.solve(*generate_matrix(self.data, self.indices, self.deltay, self.deltad, lam))
+        z = np.linalg.solve(*generate_matrix(self.data, self.indices, self.deltay, self.final_day, lam))
 
         self.parameters = {}
         for r in self.R:
