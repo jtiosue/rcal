@@ -280,6 +280,12 @@ class CalibrateData:
     def calibrated_ratings(self):
         return self.calibrated_data.copy()
 
+    def calibrated_ratings_with_improvement(self):
+        return {
+            (r, p, d): y + self.parameters[('alpha', p)] * (max(self.D) - d)
+            for ((r, p, d), y) in self.calibrated_data.items()
+        }
+
     def uncalibrated_ratings(self):
         return self.data.copy()
 
