@@ -277,6 +277,28 @@ class CalibrateData:
     def uncalibrated_rating(self, r, p, d):
         return self.data[(r, p, d)]
 
+    def sigma(self, r, y):
+        """
+        Apply reviewer r's calibrated sigma funtion to the rating y.
+        See the report for details.
+        """
+        return self.parameters[('a', r)] * y + self.parameters[('b', r)]
+
+    def f(self, p, d):
+        """
+        Apply the person p's calibrated f function to the day d.
+        See the report for details.
+        """
+        return self.parameters[('alpha', p)] * (max(self.D - d))
+
+    def apply_sigma_to_data(self, data):
+        for ((r, p, d), y) in data.items():
+            data[(r, p, d)] = self.parameters[('a', r)] * y + self.parameters[('b', r)]
+
+    def apply_f_to_data(self, data):
+        for ((r, p, d), y) in data.items():
+            data[(r, p, d)] = y + self.parameters[('alpha', p)] * (max(self.D) - d)
+
     def improvement_rates(self):
         return {p: self.parameters[('alpha', p)] for p in self.P}
 

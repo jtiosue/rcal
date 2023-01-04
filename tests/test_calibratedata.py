@@ -26,6 +26,12 @@ def test_simple_cases():
     cd.average_daily_calibrated_ratings()
     cd.improvement_rates()
 
+    for ((r, p, d), y) in data.items():
+        assert np.allclose(
+            cd.calibrated_data[(r, p, d)], 
+            cd.sigma(r, y)
+        )
+
 def test_simple_cases_1():
 
     data = {
