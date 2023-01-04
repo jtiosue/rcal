@@ -2,7 +2,7 @@
 import numpy as np
 
 
-def generate_matrix(data, indices, rating_delta=1., lam=1.):
+def generate_matrix(data, indices, rating_delta, lam):
     """
 
     data is a dictionary. The keys are tuples (r,p,d) corresponding to
@@ -223,7 +223,7 @@ class CalibrateData:
             self.parameters[('alpha', p)] = 0.
 
 
-    def calibrate(self, lam=1.):
+    def calibrate(self, lam=1e-3):
         z = np.linalg.solve(*generate_matrix(self.data, self.indices, self.rating_delta, lam))
 
         self.parameters = {}
@@ -247,7 +247,7 @@ class CalibrateData:
         y1 = max(self.calibrated_data.values())
         y0 = min(self.calibrated_data.values())
 
-        if abs(y0 - y1) < 1e-5:
+        if abs(y0 - y1) < 1e-10:
             raise Exception("Calibrated reviews are too close together to rescale")
 
         ran = upper - lower
@@ -441,3 +441,69 @@ class CalibrateData:
         for p in ratings.keys():
             ratings[p] = sum(ratings[p]) / len(ratings[p])
         return ratings
+
+
+
+if __name__ == "__main__":
+
+    import matplotlib.pyplot as plt
+
+    data = {
+        ('r1', 'p0', 0): 1,
+        ('r1', 'p1', 1): 3,
+        ('r1', 'p2', 2): 3,
+
+        ('r2', 'p2', 0): 3,
+        ('r2', 'p0', 1): 3,
+        ('r2', 'p1', 2): 4,
+
+        ('r3', 'p1', 0): 2,
+        ('r3', 'p2', 1): 2,
+        ('r3', 'p0', 2): 3,
+
+        ('r1', 'p3', 0): 1,
+        ('r2',  'p3', 1): 1,
+        ('r3', 'p3', 2): 1
+    }
+
+    cd = CalibrateData(data, rating_delta=4)
+    cd.calibrate(1e-5).rescale()
+    plt.figure()
+    plt.title("First data")
+    plt.xlabel('raw rating')
+    plt.ylabel('calibrated rating')
+    ys = np.arange(1, 5, .01)
+    plt.plot(ys, cd.sigma('r1', ys), label='r1')
+    plt.plot(ys, cd.sigma('r2', ys), label='r2')
+    plt.plot(ys, cd.sigma('r3', ys), label='r3')
+    plt.legend()
+
+
+    data = {
+        ('r1', 'p1', 0): 0,
+        ('r1', 'p1', 1): 1,
+        ('r1', 'p1', 2): 1,
+        ('r2', 'p1', 0): 3,
+        ('r2', 'p1', 1): 3,
+        ('r2', 'p1', 2): 3,
+
+        ('r1', 'p2', 0): 0,
+        ('r1', 'p2', 1): 0,
+        ('r1', 'p2', 2): 0,
+        ('r2', 'p2', 0): 2,
+        ('r2', 'p2', 1): 2,
+        ('r2', 'p2', 2): 3
+    }
+
+    cd = CalibrateData(data, rating_delta=4)
+    cd.calibrate().rescale()
+    plt.figure()
+    plt.title("Second data")
+    plt.xlabel('raw rating')
+    plt.ylabel('calibrated rating')
+    ys = np.arange(0, 5, .01)
+    plt.plot(ys, cd.sigma('r1', ys), label='r1')
+    plt.plot(ys, cd.sigma('r2', ys), label='r2')
+    plt.legend()
+
+    plt.show()

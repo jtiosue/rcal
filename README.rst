@@ -75,3 +75,4 @@ To do
 - Implement the C code so that generating the calibration matrix is feasible for large numbers of reviews.
 - Clean up code
 - Add docstrings
+- Make it so you can learn the parameters on a subset of the data. Add tests to see how well this performs on the rest of the data.
