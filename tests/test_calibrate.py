@@ -85,7 +85,7 @@ def test_single_day():
     }
 
     cp = calibrate_parameters(data)
-    cp.rescale_parameters()
+    cp.rescale_parameters(data)
     assert np.allclose(
         list(cp.improvement_rates().values()),
         [0.] * len(cp.P)
