@@ -224,6 +224,7 @@ class CalibrateData:
 
 
     def calibrate(self, lam=1e-3):
+
         z = np.linalg.solve(*generate_matrix(self.data, self.indices, self.rating_delta, lam))
 
         self.parameters = {}
@@ -247,7 +248,7 @@ class CalibrateData:
         y1 = max(self.calibrated_data.values())
         y0 = min(self.calibrated_data.values())
 
-        if abs(y0 - y1) < 1e-10:
+        if abs(y1 - y0) < 1e-10:
             raise Exception("Calibrated reviews are too close together to rescale")
 
         ran = upper - lower
@@ -259,8 +260,6 @@ class CalibrateData:
             self.parameters[('b', r)] = ran * (self.parameters[('b', r)] - y0) / (y1 - y0) + lower
         for p in self.P:
             self.parameters[('alpha', p)] *= ran / (y1 - y0)
-
-        return self
 
     def improvement_rate(self, p):
         return self.parameters[('alpha', p)]
@@ -449,61 +448,70 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     data = {
-        ('r1', 'p0', 0): 1,
-        ('r1', 'p1', 1): 3,
-        ('r1', 'p2', 2): 3,
+        ('r0', 'p0', 0): 1,
+        ('r0', 'p1', 1): 3,
+        ('r0', 'p2', 2): 3,
 
-        ('r2', 'p2', 0): 3,
-        ('r2', 'p0', 1): 3,
-        ('r2', 'p1', 2): 4,
+        ('r1', 'p2', 0): 3,
+        ('r1', 'p0', 1): 3,
+        ('r1', 'p1', 2): 4,
 
-        ('r3', 'p1', 0): 2,
-        ('r3', 'p2', 1): 2,
-        ('r3', 'p0', 2): 3,
+        ('r2', 'p1', 0): 2,
+        ('r2', 'p2', 1): 2,
+        ('r2', 'p0', 2): 3,
 
-        ('r1', 'p3', 0): 1,
-        ('r2',  'p3', 1): 1,
-        ('r3', 'p3', 2): 1
+        ('r0', 'p3', 0): 1,
+        ('r1', 'p3', 1): 1,
+        ('r2', 'p3', 2): 1
+
+        # ('r0', 'p4', 0): 5,
+        # ('r1', 'p4', 1): 5,
+        # ('r2', 'p4', 2): 5
     }
 
     cd = CalibrateData(data, rating_delta=4)
-    cd.calibrate(1e-5).rescale()
+    cd.calibrate().rescale(1, 5)
+    print({k: round(v, 2) for k, v in cd.calibrated_data.items()})
+    print({k: round(v, 2) for k, v in cd.improvement_rates().items()})
+    # print(cd.average_daily_calibrated_ratings())
     plt.figure()
-    plt.title("First data")
+    # plt.title("First data")
     plt.xlabel('raw rating')
     plt.ylabel('calibrated rating')
     ys = np.arange(1, 5, .01)
-    plt.plot(ys, cd.sigma('r1', ys), label='r1')
-    plt.plot(ys, cd.sigma('r2', ys), label='r2')
-    plt.plot(ys, cd.sigma('r3', ys), label='r3')
-    plt.legend()
-
-
-    data = {
-        ('r1', 'p1', 0): 0,
-        ('r1', 'p1', 1): 1,
-        ('r1', 'p1', 2): 1,
-        ('r2', 'p1', 0): 3,
-        ('r2', 'p1', 1): 3,
-        ('r2', 'p1', 2): 3,
-
-        ('r1', 'p2', 0): 0,
-        ('r1', 'p2', 1): 0,
-        ('r1', 'p2', 2): 0,
-        ('r2', 'p2', 0): 2,
-        ('r2', 'p2', 1): 2,
-        ('r2', 'p2', 2): 3
-    }
-
-    cd = CalibrateData(data, rating_delta=4)
-    cd.calibrate().rescale()
-    plt.figure()
-    plt.title("Second data")
-    plt.xlabel('raw rating')
-    plt.ylabel('calibrated rating')
-    ys = np.arange(0, 5, .01)
+    plt.plot(ys, cd.sigma('r0', ys), label='r0')
     plt.plot(ys, cd.sigma('r1', ys), label='r1')
     plt.plot(ys, cd.sigma('r2', ys), label='r2')
     plt.legend()
-
     plt.show()
+
+
+    # data = {
+    #     ('r1', 'p1', 0): 0,
+    #     ('r1', 'p1', 1): 1,
+    #     ('r1', 'p1', 2): 1,
+    #     ('r2', 'p1', 0): 3,
+    #     ('r2', 'p1', 1): 3,
+    #     ('r2', 'p1', 2): 3,
+
+    #     ('r1', 'p2', 0): 0,
+    #     ('r1', 'p2', 1): 0,
+    #     ('r1', 'p2', 2): 0,
+    #     ('r2', 'p2', 0): 2,
+    #     ('r2', 'p2', 1): 2,
+    #     ('r2', 'p2', 2): 3
+    # }
+
+    # cd = CalibrateData(data, rating_delta=4)
+    # cd.calibrate().rescale()
+    # print(cd.calibrated_data)
+    # plt.figure()
+    # # plt.title("Second data")
+    # plt.xlabel('raw rating')
+    # plt.ylabel('calibrated rating')
+    # ys = np.arange(0, 5, .01)
+    # plt.plot(ys, cd.sigma('r1', ys), label='r1')
+    # plt.plot(ys, cd.sigma('r2', ys), label='r2')
+    # plt.legend()
+
+    # plt.show()
