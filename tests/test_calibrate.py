@@ -27,7 +27,7 @@ def test_simple_cases():
     assert all((0 <= v <= 1 for v in calibrated_data.values()))
     cp.improvement_rates()
 
-    cp.rescale_parameters(data, (0, 4))
+    cp.rescale_parameters(data, (0., 4.))
     calibrated_data = cp.calibrate_data(data)
     assert all((0 <= v <= 4 for v in calibrated_data.values()))
 
@@ -37,7 +37,7 @@ def test_simple_cases():
             cp.sigma(r, y)
         )
 
-    cp.rescale_parameters(data, (0, 4), True)
+    cp.rescale_parameters(data, (0., 4.), True)
     calibrated_data = cp.calibrate_data(data, True)
     assert all((0 <= v <= 4 for v in calibrated_data.values()))
 
