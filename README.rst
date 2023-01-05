@@ -40,7 +40,7 @@ Example usage
 
 .. code:: python
     
-    from rcal import CalibrateData
+    from rcal import calibrate_parameters
 
     data = {
         ('r1', 'p0', 0): 1,  # reviewer 1 gives person 0 a 1 star rating on day 0
@@ -60,12 +60,17 @@ Example usage
         ('r3', 'p3', 2): 1   # reviewer 3 gives person 3 a 1 star rating on day 2
     }
 
-    cd = CalibrateData(data, rating_delta=4)  # rating_delta is the max score (5 stars) minus the min score (1 star) 
-    cd.calibrate().rescale(0, 1)  # calibrate and rescale data to between 0 and 1
-    print(cd.calibrated_ratings())
-    print(cd.average_daily_calibrated_ratings())
-    print(cd.improvement_rates())
-    print(cd.average_daily_calibrated_ratings_with_improvement())
+    # rating_delta is the max score (5 stars) minus the min score (1 star)
+    cp = calibrate_parameters(data, rating_delta=4)
+    
+    # rescale the parameters so that the calibrated reviews are between 0 and 1
+    cp.rescale_parameters(data, (0, 1))
+
+    # get the calibrated data with these parameters
+    print(cp.calibrate_data(data))
+    
+    # get the improvement rates
+    print(cp.improvement_rates())
 
 
 
@@ -75,4 +80,3 @@ To do
 - Implement the C code so that generating the calibration matrix is feasible for large numbers of reviews.
 - Clean up code
 - Add docstrings
-- Make it so you can learn the parameters on a subset of the data. Add tests to see how well this performs on the rest of the data.

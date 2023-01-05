@@ -2,6 +2,15 @@
 import numpy as np
 
 
+# maybe change this to a warning?
+class RescaleException(Exception):
+    """
+    Raised when there is an error when trying to rescale
+    parameters.
+    """
+    threshold = 1e-10
+
+
 def generate_matrix(data, indices, rating_delta, lam):
     """
 
@@ -194,72 +203,113 @@ def generate_matrix(data, indices, rating_delta, lam):
     return A, c
 
 
+def calibrate_parameters(data, rating_delta=None, lam=1e-3):
+
+    P, R = set(), set()
+    for x in data:
+        P.add(x[1])
+        R.add(x[0])
+
+    if rating_delta is None:
+        rating_delta = max(data.values()) - min(data.values())
+
+    indices = {}
+    for i, r in enumerate(R):
+        indices[('a', r)] = i
+        indices[('b', r)] = i + len(R)
+    for i, p in enumerate(P):
+        indices[('alpha', p)] = i + 2 * len(R)
+
+    z = np.linalg.solve(*generate_matrix(data, indices, rating_delta, lam))
+
+    parameters = {}
+    for r in R:
+        parameters[('a', r)] = z[indices[('a', r)]]
+        parameters[('b', r)] = z[indices[('b', r)]]
+    for p in P:
+        parameters[('alpha', p)] = z[indices[('alpha', p)]]
+
+    return CalibrationParameters(parameters)
 
 
-class CalibrateData:
-    
-    def __init__(self, data, rating_delta=None):
+
+class CalibrationParameters:
+
+    def __init__(self, parameters, copy=False):
+
+        if copy:
+            self.parameters = parameters.copy()
+        else:
+            self.parameters = parameters
+
+        self.P, self.R = set(), set()
+
+        for (t, i) in self.parameters:
+            if t in ('a', 'b'):
+                self.R.add(i)
+            elif t == 'alpha':
+                self.P.add(i)
+
+    def calibrate_data(self, data, with_improvement=False):
+        """
+        Uses the internal parameters to calibrate ``data``.
+        """
+
+        calibrated_data = {}
+        w = float(with_improvement)
+
+        for ((r, p, d), y) in data.items():
+            if isinstance(y, list):
+                calibrated_data[(r, p, d)] = [
+                    self.parameters[('a', r)] * yy + self.parameters[('b', r)]
+                    - w * self.parameters[('alpha', p)] * d
+                    for yy in y
+                ]
+            else:
+                calibrated_data[(r, p, d)] = (
+                    self.parameters[('a', r)] * y + self.parameters[('b', r)]
+                    - w * self.parameters[('alpha', p)] * d
+                )
         
-        self.P, self.R, self.D = set(), set(), set()
-        self.data, self.calibrated_data = {}, {}
+        return calibrated_data
 
-        for x, y in data.items():
-            self.data[x] = y
-            self.calibrated_data[x] = y
-            self.P.add(x[1])
-            self.R.add(x[0])
-            self.D.add(x[2])
+    def rescale_parameters(self, data, bounds=(0., 1.), with_improvement=False):
+        """
+        Rescales the internal parameters based on the input data.
+        """
 
-        self.rating_delta = rating_delta if rating_delta is not None else max(self.data.values()) - min(self.data.values())
+        data = self.calibrate_data(data, with_improvement)
 
-        self.indices, self.parameters = {}, {}
-        for i, r in enumerate(self.R):
-            self.indices[('a', r)] = i
-            self.indices[('b', r)] = i + len(self.R)
-            self.parameters[('a', r)] = 1.
-            self.parameters[('b', r)] = 0.
-        for i, p in enumerate(self.P):
-            self.indices[('alpha', p)] = i + 2 * len(self.R)
-            self.parameters[('alpha', p)] = 0.
+        vals = set()
+        for v in data.values():
+            vals.update(v) if isinstance(v, list) else vals.add(v)
+        y1 = max(vals)
+        y0 = min(vals)
 
+        # maybe change this to a warning unless exactly zero?
+        if abs(y1 - y0) < RescaleException.threshold:
+            raise RescaleException("Calibrated reviews are too close together to rescale")
 
-    def calibrate(self, lam=1e-3):
-
-        z = np.linalg.solve(*generate_matrix(self.data, self.indices, self.rating_delta, lam))
-
-        self.parameters = {}
-        for r in self.R:
-            self.parameters[('a', r)] = z[self.indices[('a', r)]]
-            self.parameters[('b', r)] = z[self.indices[('b', r)]]
-        for p in self.P:
-            self.parameters[('alpha', p)] = z[self.indices[('alpha', p)]]
-
-        self.calibrated_data = {
-            (r, p, d): (
-                self.parameters[('a', r)] * rating + self.parameters[('b', r)]
-            )
-            for ((r, p, d), rating) in self.data.items()
-        }
-
-        return self
-
-    def rescale(self, lower=0., upper=1.):
-
-        y1 = max(self.calibrated_data.values())
-        y0 = min(self.calibrated_data.values())
-
-        if abs(y1 - y0) < 1e-10:
-            raise Exception("Calibrated reviews are too close together to rescale")
-
+        lower, upper = bounds
         ran = upper - lower
 
-        for key, rating in self.calibrated_data.items():
-            self.calibrated_data[key] = ran * (rating - y0) / (y1 - y0) + lower
+        # for key, rating in data.items():
+        #     data[key] = ran * (rating - y0) / (y1 - y0) + lower
         for r in self.R:
             self.parameters[('a', r)] *= ran / (y1 - y0)
             self.parameters[('b', r)] = ran * (self.parameters[('b', r)] - y0) / (y1 - y0) + lower
         for p in self.P:
             self.parameters[('alpha', p)] *= ran / (y1 - y0)
+
+        return self
+
+    def sigma(self, r, y):
+
+        return self.parameters[('a', r)] * y + self.parameters[('b', r)]
+
+    def f(self, p, d):
+
+        return - self.parameters[('alpha', p)] * d
 
     def improvement_rate(self, p):
         return self.parameters[('alpha', p)]
@@ -270,34 +320,6 @@ class CalibrateData:
     def reviewer_offset(self, r):
         return self.parameters[('b', r)]
 
-    def calibrated_rating(self, r, p, d):
-        return self.calibrated_data[(r, p, d)]
-
-    def uncalibrated_rating(self, r, p, d):
-        return self.data[(r, p, d)]
-
-    def sigma(self, r, y):
-        """
-        Apply reviewer r's calibrated sigma funtion to the rating y.
-        See the report for details.
-        """
-        return self.parameters[('a', r)] * y + self.parameters[('b', r)]
-
-    def f(self, p, d):
-        """
-        Apply the person p's calibrated f function to the day d.
-        See the report for details.
-        """
-        return self.parameters[('alpha', p)] * (max(self.D - d))
-
-    def apply_sigma_to_data(self, data):
-        for ((r, p, d), y) in data.items():
-            data[(r, p, d)] = self.parameters[('a', r)] * y + self.parameters[('b', r)]
-
-    def apply_f_to_data(self, data):
-        for ((r, p, d), y) in data.items():
-            data[(r, p, d)] = y + self.parameters[('alpha', p)] * (max(self.D) - d)
-
     def improvement_rates(self):
         return {p: self.parameters[('alpha', p)] for p in self.P}
 
@@ -306,140 +328,6 @@ class CalibrateData:
 
     def reviewer_offsets(self):
         return {r: self.parameters[('b', r)] for r in self.R}
-
-    def calibrated_ratings(self):
-        return self.calibrated_data.copy()
-
-    def calibrated_ratings_with_improvement(self):
-        return {
-            (r, p, d): y + self.parameters[('alpha', p)] * (max(self.D) - d)
-            for ((r, p, d), y) in self.calibrated_data.items()
-        }
-
-    def uncalibrated_ratings(self):
-        return self.data.copy()
-
-    def all_reviews(self):
-        yield from self.data.keys()
-
-    def all_reviewers(self):
-        yield from self.R
-
-    def all_persons(self):
-        yield from self.P
-
-    def all_days(self):
-        yield from self.D
-
-    def average_daily_calibrated_ratings(self):
-        ratings = {}
-        for ((_, p, d), y) in self.calibrated_data.items():
-            ratings.setdefault(p, {}).setdefault(d, []).append(y)
-        for p in ratings.keys():
-            for d in ratings[p].keys():
-                ratings[p][d] = sum(ratings[p][d]) / len(ratings[p][d])
-        return ratings
-
-    def average_daily_uncalibrated_ratings(self):
-        ratings = {}
-        for ((_, p, d), y) in self.data.items():
-            ratings.setdefault(p, {}).setdefault(d, []).append(y)
-        for p in ratings.keys():
-            for d in ratings[p].keys():
-                ratings[p][d] = sum(ratings[p][d]) / len(ratings[p][d])
-        return ratings
-
-    def average_calibrated_ratings(self):
-        ratings = {}
-        for ((_, p, __), y) in self.calibrated_data.items():
-            ratings.setdefault(p, []).append(y)
-        for p in ratings.keys():
-            ratings[p] = sum(ratings[p]) / len(ratings[p])
-        return ratings
-
-    def average_uncalibrated_ratings(self):
-        ratings = {}
-        for ((_, p, __), y) in self.data.items():
-            ratings.setdefault(p, []).append(y)
-        for p in ratings.keys():
-            ratings[p] = sum(ratings[p]) / len(ratings[p])
-        return ratings
-
-    def average_reviewer_daily_calibrated_ratings(self):
-        ratings = {}
-        for ((r, _, d), y) in self.calibrated_data.items():
-            ratings.setdefault(r, {}).setdefault(d, []).append(y)
-        for r in ratings.keys():
-            for d in ratings[r].keys():
-                ratings[r][d] = sum(ratings[r][d]) / len(ratings[r][d])
-        return ratings
-
-    def average_reviewer_daily_uncalibrated_ratings(self):
-        ratings = {}
-        for ((r, _, d), y) in self.data.items():
-            ratings.setdefault(r, {}).setdefault(d, []).append(y)
-        for r in ratings.keys():
-            for d in ratings[r].keys():
-                ratings[r][d] = sum(ratings[r][d]) / len(ratings[r][d])
-        return ratings
-
-    def average_reviewer_calibrated_ratings(self):
-        ratings = {}
-        for ((r, _, __), y) in self.calibrated_data.items():
-            ratings.setdefault(r, []).append(y)
-        for r in ratings.keys():
-            ratings[r] = sum(ratings[r]) / len(ratings[r])
-        return ratings
-
-    def average_reviewer_uncalibrated_ratings(self):
-        ratings = {}
-        for ((r, _, __), y) in self.data.items():
-            ratings.setdefault(r, []).append(y)
-        for r in ratings.keys():
-            ratings[r] = sum(ratings[r]) / len(ratings[r])
-        return ratings
-
-    def average_daily_calibrated_ratings_with_improvement(self):
-        ratings = {}
-        for ((_, p, d), y) in self.calibrated_data.items():
-            ratings.setdefault(p, {}).setdefault(d, []).append(
-                y + self.parameters[('alpha', p)] * (max(self.D) - d)
-            )
-        for p in ratings.keys():
-            for d in ratings[p].keys():
-                ratings[p][d] = sum(ratings[p][d]) / len(ratings[p][d])
-        return ratings
-
-    def average_daily_uncalibrated_ratings_with_improvement(self):
-        ratings = {}
-        for ((_, p, d), y) in self.data.items():
-            ratings.setdefault(p, {}).setdefault(d, []).append(
-                y + self.parameters[('alpha', p)] * (max(self.D) - d)
-            )
-        for p in ratings.keys():
-            for d in ratings[p].keys():
-                ratings[p][d] = sum(ratings[p][d]) / len(ratings[p][d])
-        return ratings
-
-    def average_calibrated_ratings_with_improvement(self):
-        ratings = {}
-        for ((_, p, d), y) in self.calibrated_data.items():
-            ratings.setdefault(p, []).append(
-                y + self.parameters[('alpha', p)] * (max(self.D) - d)
-            )
-        for p in ratings.keys():
-            ratings[p] = sum(ratings[p]) / len(ratings[p])
-        return ratings
-
-    def average_uncalibrated_ratings_with_improvement(self):
-        ratings = {}
-        for ((_, p, d), y) in self.data.items():
-            ratings.setdefault(p, []).append(
-                y + self.parameters[('alpha', p)] * (max(self.D) - d)
-            )
-        for p in ratings.keys():
-            ratings[p] = sum(ratings[p]) / len(ratings[p])
-        return ratings
 
 
 
@@ -469,49 +357,19 @@ if __name__ == "__main__":
         # ('r2', 'p4', 2): 5
     }
 
-    cd = CalibrateData(data, rating_delta=4)
-    cd.calibrate().rescale(1, 5)
-    print({k: round(v, 2) for k, v in cd.calibrated_data.items()})
-    print({k: round(v, 2) for k, v in cd.improvement_rates().items()})
+    cp = calibrate_parameters(data, rating_delta=4)
+    calibrated_data = cp.rescale_parameters(data, (1, 5)).calibrate_data(data)
+    print({k: round(v, 2) for k, v in calibrated_data.items()})
+    print({k: round(v, 2) for k, v in cp.improvement_rates().items()})
     # print(cd.average_daily_calibrated_ratings())
     plt.figure()
     # plt.title("First data")
     plt.xlabel('raw rating')
     plt.ylabel('calibrated rating')
     ys = np.arange(1, 5, .01)
-    plt.plot(ys, cd.sigma('r0', ys), label='r0')
-    plt.plot(ys, cd.sigma('r1', ys), label='r1')
-    plt.plot(ys, cd.sigma('r2', ys), label='r2')
+    plt.plot(ys, cp.sigma('r0', ys), label='r0')
+    plt.plot(ys, cp.sigma('r1', ys), label='r1')
+    plt.plot(ys, cp.sigma('r2', ys), label='r2')
     plt.legend()
     plt.show()
 
-
-    # data = {
-    #     ('r1', 'p1', 0): 0,
-    #     ('r1', 'p1', 1): 1,
-    #     ('r1', 'p1', 2): 1,
-    #     ('r2', 'p1', 0): 3,
-    #     ('r2', 'p1', 1): 3,
-    #     ('r2', 'p1', 2): 3,
-
-    #     ('r1', 'p2', 0): 0,
-    #     ('r1', 'p2', 1): 0,
-    #     ('r1', 'p2', 2): 0,
-    #     ('r2', 'p2', 0): 2,
-    #     ('r2', 'p2', 1): 2,
-    #     ('r2', 'p2', 2): 3
-    # }
-
-    # cd = CalibrateData(data, rating_delta=4)
-    # cd.calibrate().rescale()
-    # print(cd.calibrated_data)
-    # plt.figure()
-    # # plt.title("Second data")
-    # plt.xlabel('raw rating')
-    # plt.ylabel('calibrated rating')
-    # ys = np.arange(0, 5, .01)
-    # plt.plot(ys, cd.sigma('r1', ys), label='r1')
-    # plt.plot(ys, cd.sigma('r2', ys), label='r2')
-    # plt.legend()
-
-    # plt.show()
