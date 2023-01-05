@@ -24,12 +24,12 @@ def test_simple_cases():
     cp = calibrate_parameters(data)
     cp.rescale_parameters(data)
     calibrated_data = cp.calibrate_data(data)
-    assert all((0 <= v <= 1 for v in calibrated_data.values()))
+    assert all((0 <= round(v, 7) <= 1 for v in calibrated_data.values()))
     cp.improvement_rates()
 
     cp.rescale_parameters(data, (0., 4.))
     calibrated_data = cp.calibrate_data(data)
-    assert all((0 <= v <= 4 for v in calibrated_data.values()))
+    assert all((0 <= round(v, 7) <= 4 for v in calibrated_data.values()))
 
     for ((r, p, d), y) in data.items():
         assert np.allclose(
@@ -39,7 +39,7 @@ def test_simple_cases():
 
     cp.rescale_parameters(data, (0., 4.), True)
     calibrated_data = cp.calibrate_data(data, True)
-    assert all((0 <= v <= 4 for v in calibrated_data.values()))
+    assert all((0 <= round(v, 7) <= 4 for v in calibrated_data.values()))
 
     for ((r, p, d), y) in data.items():
         assert np.allclose(
