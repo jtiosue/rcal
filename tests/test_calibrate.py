@@ -120,5 +120,5 @@ def test_verylarge_case():
     # one my laptop, this takes 2 seconds with the c code,
     # 35 with py_generate_matrix, and 55 seconds with
     # py_generate_matrix_slow
-    cp = calibrated_parameters(data)
+    cp = calibrate_parameters(data)
     cp.rescale_parameters(data).calibrate_data(data)
