@@ -94,8 +94,6 @@ def test_single_day():
 
 def test_large_case():
 
-    # once c code is written, need to make this even larger.
-
     data = {}
     for r in range(10):
         for p in range(100):
@@ -108,3 +106,19 @@ def test_large_case():
 
     # for this type of random data, we expect all the calibrated
     # ratings to be roughly around  .5
+
+
+def test_verylarge_case():
+
+    data = {}
+    for r in range(20):
+        for p in range(200):
+            for d in range(8):
+                data[(r, p, d)] = random.random()
+    # 32000 reviews
+
+    # one my laptop, this takes 2 seconds with the c code,
+    # 35 with py_generate_matrix, and 55 seconds with
+    # py_generate_matrix_slow
+    cp = calibrated_parameters(data)
+    cp.rescale_parameters(data).calibrate_data(data)

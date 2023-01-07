@@ -77,6 +77,5 @@ Example usage
 To do
 -----
 
-- Implement the C code so that generating the calibration matrix is feasible for large numbers of reviews.
 - Clean up code
 - Add docstrings

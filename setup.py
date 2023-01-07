@@ -36,11 +36,11 @@ with open("rcal/_version.py") as f:
 
 # create the extension for the C file in qubovert.sim.src
 extensions = [
-    # setuptools.Extension(
-        # name='rcal._c_code',
-        # sources=['./rcal/_c_code.c'],
-        # language='c'
-    # )
+    setuptools.Extension(
+        name='rcal._c_generate_matrix',
+        sources=['./rcal/_c_generate_matrix.c'],
+        language='c'
+    )
 ]
 
 setuptools.setup(
