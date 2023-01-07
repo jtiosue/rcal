@@ -96,11 +96,6 @@ class CalibrationParameters:
 
         data = self.calibrate_data(data, with_improvement)
 
-        # vals = set()
-        # for v in data.values():
-        #     vals.update(v) if isinstance(v, list) else vals.add(v)
-        # y1 = max(vals)
-        # y0 = min(vals)
         vals = []
         for v in data.values():
             vals.extend(v) if isinstance(v, list) else vals.append(v)
