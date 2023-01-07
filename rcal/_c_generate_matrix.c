@@ -98,10 +98,11 @@ static PyObject* c_generate_matrix(PyObject* self, PyObject* args) {
 
     // Make the A matrix and C vector all zeros.
     long num_params = (long)PyDict_Size(indices);
-    double A[num_params][num_params];
-    double C[num_params];
+    double *C = (double*)malloc(num_params * sizeof(double));
+    double **A = (double**)malloc(num_params * sizeof(double*));
     for(long i=0; i<num_params; i++) {
         C[i] = 0.;
+        A[i] = (double*)malloc(num_params * sizeof(double));
         for(long j=0; j<num_params; j++) {
             A[i][j] = 0.;
         }
@@ -229,6 +230,12 @@ static PyObject* c_generate_matrix(PyObject* self, PyObject* args) {
         }
         PyList_SetItem(a, row, l);
     }
+
+    // free memory
+    for(long i=0; i<num_params; i++) {
+        free(A[i]);
+    }
+    free(A); free(C);
 
     return two_tuple(a, c);
 }
