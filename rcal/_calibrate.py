@@ -84,22 +84,54 @@ class CalibrationParameters:
         
         return calibrated_data
 
-    def rescale_parameters(self, data, bounds=(0., 1.), with_improvement=False):
+    def rescale_parameters(self, data, bounds=(0., 1.), with_improvement=False, ignore_outliers=float("inf")):
         """
         Rescales the internal parameters based on the input data.
+        ignore_outliners dictates whether outliers should be ignored when doing the rescaling.
+        If ignore_outliers=float("inf") (this is default), then outliers will never be ignored.
+        If ignore_outliers=f for some float f, then all calibrated scores that are not within f
+        standard deviations of the mean of all calibrated scores will be treated as outliers and ignored.
+        If outliers are ignored then there will be some data that is not within the bounds.
         """
 
         data = self.calibrate_data(data, with_improvement)
 
-        vals = set()
+        # vals = set()
+        # for v in data.values():
+        #     vals.update(v) if isinstance(v, list) else vals.add(v)
+        # y1 = max(vals)
+        # y0 = min(vals)
+        vals = []
         for v in data.values():
-            vals.update(v) if isinstance(v, list) else vals.add(v)
-        y1 = max(vals)
-        y0 = min(vals)
+            vals.extend(v) if isinstance(v, list) else vals.append(v)
+        vals.sort()
+        y0, y1 = vals[0], vals[-1]
 
         # maybe change this to a warning unless exactly zero?
         if abs(y1 - y0) < RescaleException.threshold:
             raise RescaleException("Calibrated reviews are too close together to rescale")
+
+        # remove outliers
+        if ignore_outliers <= 0:
+            raise RescaleException("ignore_outliers must be positive")
+        elif ignore_outliers != float("inf"):
+            mean_rating, std_rating = np.mean(vals), np.std(vals)
+            if std_rating < RescaleException.threshold:
+                raise RescaleException("Standard deviation is too small to ignore outliers")
+            i = 0
+            while (mean_rating - y0) / std_rating > ignore_outliers:
+                i += 1
+                y0 = vals[i]
+            i = len(vals) - 1
+            while (y1 - mean_rating) / std_rating > ignore_outliers:
+                i -= 1
+                y1 = vals[i]
+
+            # check again
+            if abs(y1 - y0) < RescaleException.threshold:
+                raise RescaleException("Calibrated reviews are too close together to rescale")
+
+        # calibrate
 
         lower, upper = bounds
         ran = upper - lower
@@ -115,11 +147,9 @@ class CalibrationParameters:
         return self
 
     def sigma(self, r, y):
-
         return self.parameters[('a', r)] * y + self.parameters[('b', r)]
 
     def f(self, p, d):
-
         return - self.parameters[('alpha', p)] * d
 
     def improvement_rate(self, p):

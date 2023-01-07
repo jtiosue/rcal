@@ -122,3 +122,27 @@ def test_verylarge_case():
     # py_generate_matrix_slow
     cp = calibrate_parameters(data)
     cp.rescale_parameters(data).calibrate_data(data)
+
+
+def test_ignore_outliers():
+
+    train_data = {
+        ('r1', 'p1', 0): 4,
+        ('r2', 'p1', 0): 1,
+        ('r1', 'p2', 0): 5,
+        ('r2', 'p2', 0): 2,
+        ('r2', 'p2', 1): 1,
+        ('r2', 'p1', 2): 2,
+
+        ('r2', 'p3', 2): 2,
+        ('r2', 'p3', 3): 1,
+        ('r2', 'p3', 4): 1,
+        ('r1', 'p3', 2): 5,
+        ('r1', 'p3', 3): 4
+    }
+    data = train_data.copy()
+    data[('r2', 'p1', 1)] = 5
+    cp = calibrate_parameters(train_data, rating_delta=4)
+    cp.rescale_parameters(data, ignore_outliers=2.5)
+    calibrated_data = cp.calibrate_data(data)
+    assert calibrated_data[('r2', 'p1', 1)] > 1
