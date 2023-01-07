@@ -1,4 +1,6 @@
 from rcal import c_generate_matrix, py_generate_matrix, py_generate_matrix_slow
+import numpy as np
+import random
 
 
 def assertclose(data, lam):
