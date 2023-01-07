@@ -140,6 +140,9 @@ class CalibrationParameters:
     def reviewer_offsets(self):
         return {r: self.parameters[('b', r)] for r in self.R}
 
+    def __str__(self):
+        return "CalibrationParameters(%s)" % self.parameters
+
 
 
 if __name__ == "__main__":
