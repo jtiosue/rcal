@@ -1,6 +1,39 @@
-from rcal import calibrate_parameters
+# Copyright 2023 Joseph T. Iosue
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+Contains tests for the calibrate_parameters function.
+"""
+
+from rcal import calibrate_parameters, RescaleException
 import random
 import numpy as np
+
+
+def test_errors():
+
+    data = {
+        ('r1', 'p1', 0): 1.
+    }
+    with np.testing.assert_raises(np.linalg.LinAlgError):
+        calibrate_parameters(data)
+
+    cp = CalibrationParameters(
+        {('a', 'r1'): 1, ('b', 'r1'): 1, ('alpha', 'p1'): 0}
+    )
+    with np.testing.assert_raises(RescaleException):
+        cp.rescale_parameters(data)
 
 
 def test_simple_cases():
@@ -146,3 +179,6 @@ def test_ignore_outliers():
     cp.rescale_parameters(data, ignore_outliers=2.5)
     calibrated_data = cp.calibrate_data(data)
     assert calibrated_data[('r2', 'p1', 1)] > 1
+
+    with np.testing.assert_raises(RescaleException):
+        cp.rescale_parameters(data, ignore_outliers=0)

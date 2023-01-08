@@ -1,3 +1,17 @@
+// Copyright 2023 Joseph T. Iosue
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Python.h"
 
 
@@ -41,8 +55,8 @@ static char _c_generate_matrix_docstring[] =
 
 static char c_generate_matrix_docstring[] =
     "c_generate_matrix.\n\n"
-    "Returns A, c.      \n"
-    "Arguments are (data, indices, rating_delta, lam). \n";
+    "See the docstring of the rcal.py_generate_matrix function.\n"
+    "The input and output for this function are the same as for that one.\n";
 
 
 static PyObject* c_generate_matrix(PyObject* self, PyObject* args) {

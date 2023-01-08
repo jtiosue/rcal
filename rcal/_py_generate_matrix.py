@@ -1,29 +1,59 @@
+# Copyright 2023 Joseph T. Iosue
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""_py_generate_matrix.py
+
+Contains Python generate_matrix functions to compare to the C
+implementation.
+
+"""
+
 import numpy as np
 
 
 def py_generate_matrix_slow(data, indices, rating_delta, lam):
-    """
+    """py_generate_matrix_slow.
 
-    data is a dictionary. The keys are tuples (r,p,d) corresponding to
-    a reviewer r, a person p, and the day of the rating d. The values
-    are the corresponding rating of the person on that day by the reviewer.
+    Generate the matrices A, c encoding the calibration problem.
+    See rcal.py_generate_matrix for a faster version of this function,
+    and rcal.c_generate_matrix for an even faster version.
 
-    indices is a dictionary mapping parameters to unique integer indices. keys are
-    ('a', r), ('b', r), and ('alpha', p), for reviewers r and people p.
-    It must be that indices[('a', r)] takes values 0 through num_reviewers - 1,
-    indices[('b', r)] takes values num_reviewers through 2 num_reviewers - 1,
-    and indices[('alpha', p)] takes values 2 num_reviewers and above.
+    Parameteres
+    -----------
+    data : dict.
+        data is a dictionary. The keys are tuples (r, p, d) corresponding to
+        a reviewer r, a person p, and the day of the rating d. The values
+        are the corresponding rating of the person on that day by the reviewer.
+        In this case, r and p should be either ints or strings, and d should be
+        floats.
+    indicies : dict.
+        indices is a dictionary mapping parameters to unique integer indices. keys are
+        ('a', r), ('b', r), and ('alpha', p), for reviewers r and people p.
+        It must be that indices[('a', r)] takes values 0 through num_reviewers - 1,
+        indices[('b', r)] takes values num_reviewers through 2 num_reviewers - 1,
+        and indices[('alpha', p)] takes values 2 num_reviewers and above.
+    rating_delta : float.
+        rating_delta is the range of the allowed ratings. E.g. 
+        for 1 through 5 stars, rating_delta = 5-1 = 4.
+    lam : float.
+        lam is the multiplier from the report.
 
-    rating_delta is the range of the allowed ratings. E.g. for 1 through 5 stars,
-    rating_delta = 5-1 = 4.
-
-    lam is the multiplier lambda from the paper. We guess that lamda = 1 is the best.
-
-    This function returns a tuple (calibrated_data, parameters)
-    where calibrated_data is the same shape dictionary as data but with the ratings
-    calibrated. 
-    parameters is a dictionary with the relevant parameters. For example, 
-    parameters[('alpha', p)] gives the improvement rate of person p.
+    Returns
+    -------
+    Tuples (A, c), where A is a two-dimensional array and c is a
+    one-dimensional array. The calibrated parameters are then encoded
+    by z, where Az = c.
 
     """
 
@@ -200,28 +230,36 @@ def py_generate_matrix_slow(data, indices, rating_delta, lam):
 
 
 def py_generate_matrix(data, indices, rating_delta, lam):
-    """
+    """py_generate_matrix.
 
-    data is a dictionary. The keys are tuples (r,p,d) corresponding to
-    a reviewer r, a person p, and the day of the rating d. The values
-    are the corresponding rating of the person on that day by the reviewer.
+    Generate the matrices A, c encoding the calibration problem.
+    See rcal.c_generate_matrix for a faster version of this function.
 
-    indices is a dictionary mapping parameters to unique integer indices. keys are
-    ('a', r), ('b', r), and ('alpha', p), for reviewers r and people p.
-    It must be that indices[('a', r)] takes values 0 through num_reviewers - 1,
-    indices[('b', r)] takes values num_reviewers through 2 num_reviewers - 1,
-    and indices[('alpha', p)] takes values 2 num_reviewers and above.
+    Parameteres
+    -----------
+    data : dict.
+        data is a dictionary. The keys are tuples (r, p, d) corresponding to
+        a reviewer r, a person p, and the day of the rating d. The values
+        are the corresponding rating of the person on that day by the reviewer.
+        In this case, r and p should be either ints or strings, and d should be
+        floats.
+    indicies : dict.
+        indices is a dictionary mapping parameters to unique integer indices. keys are
+        ('a', r), ('b', r), and ('alpha', p), for reviewers r and people p.
+        It must be that indices[('a', r)] takes values 0 through num_reviewers - 1,
+        indices[('b', r)] takes values num_reviewers through 2 num_reviewers - 1,
+        and indices[('alpha', p)] takes values 2 num_reviewers and above.
+    rating_delta : float.
+        rating_delta is the range of the allowed ratings. E.g. 
+        for 1 through 5 stars, rating_delta = 5-1 = 4.
+    lam : float.
+        lam is the multiplier from the report.
 
-    rating_delta is the range of the allowed ratings. E.g. for 1 through 5 stars,
-    rating_delta = 5-1 = 4.
-
-    lam is the multiplier lambda from the paper. We guess that lamda = 1 is the best.
-
-    This function returns a tuple (calibrated_data, parameters)
-    where calibrated_data is the same shape dictionary as data but with the ratings
-    calibrated. 
-    parameters is a dictionary with the relevant parameters. For example, 
-    parameters[('alpha', p)] gives the improvement rate of person p.
+    Returns
+    -------
+    Tuples (A, c), where A is a two-dimensional array and c is a
+    one-dimensional array. The calibrated parameters are then encoded
+    by z, where Az = c.
 
     """
 

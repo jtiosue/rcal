@@ -1,3 +1,23 @@
+# Copyright 2023 Joseph T. Iosue
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""_calibrate.py
+
+Contains the main functionality of rcal.
+
+"""
+
 from rcal._c_generate_matrix import c_generate_matrix
 import numpy as np
 
@@ -12,6 +32,32 @@ class RescaleException(Exception):
 
 
 def calibrate_parameters(data, rating_delta=None, lam=1e-3):
+    """calibrate_parameters.
+
+    Calibrate the reviewer and persons parameters from the data.
+
+    Parameteres
+    -----------
+    data : dict.
+        data is a dictionary. The keys are tuples (r, p, d) corresponding to
+        a reviewer r, a person p, and the day of the rating d. The values
+        are the corresponding rating of the person on that day by the reviewer.
+        In this case, r and p should be either ints or strings, and d should be
+        floats.
+    rating_delta : float (default None).
+        rating_delta is the range of the allowed ratings. E.g. 
+        for 1 through 5 stars, rating_delta = 5-1 = 4.
+        If rating_delta is None, then it will be automatically computed.
+    lam : float (default .001).
+        lam is the multiplier from the report. By default, this should be very small
+        but nonzero.
+
+    Returns
+    -------
+    cp : rcal.CalibrationParameters object.
+        Contains the information for the parameters calibrated from the data.
+
+    """
 
     if not data:
         return CalibrationParameters({})
@@ -38,8 +84,24 @@ def calibrate_parameters(data, rating_delta=None, lam=1e-3):
 
 
 class CalibrationParameters:
+    """CalibrationParameters.
+
+    Stuff.
+
+    """
 
     def __init__(self, parameters, copy=False):
+        """__init__.
+
+        Parameters
+        ----------
+        parameters : dict.
+            Dictionary mapping the parameters ('a', r), ('b', r) and ('alpha', p)
+            to their respective floats, where r and p denote reviewers and persons.
+        copy : bool (default False).
+            Whether or not to internally copy the parameters dictionary.
+
+        """
 
         if copy:
             self.parameters = parameters.copy()
@@ -55,8 +117,28 @@ class CalibrationParameters:
                 self.P.add(i)
 
     def calibrate_data(self, data, with_improvement=False):
-        """
+        """calibrate_data.
+
         Uses the internal parameters to calibrate ``data``.
+
+        Parameters
+        ----------
+        data : dict.
+            data is a dictionary. The keys are tuples (r, p, d) corresponding to
+            a reviewer r, a person p, and the day of the rating d. The values
+            are the corresponding rating of the person on that day by the reviewer.
+            In this case, r and p should be either ints or strings, and d should be
+            floats.
+        with_improvement : bool (default False).
+            Whether to calibrate with just sigma (with_improvement = False) or
+            with sigma and f (with_improvement = True).
+            See the report for more details.
+
+        Returns
+        --------
+        calibrated_data : dict.
+            Same shape as data.
+
         """
 
         calibrated_data = {}
@@ -78,13 +160,35 @@ class CalibrationParameters:
         return calibrated_data
 
     def rescale_parameters(self, data, bounds=(0., 1.), with_improvement=False, ignore_outliers=float("inf")):
-        """
+        """rescale_parameters.
+
         Rescales the internal parameters based on the input data.
-        ignore_outliners dictates whether outliers should be ignored when doing the rescaling.
-        If ignore_outliers=float("inf") (this is default), then outliers will never be ignored.
-        If ignore_outliers=f for some float f, then all calibrated scores that are not within f
-        standard deviations of the mean of all calibrated scores will be treated as outliers and ignored.
-        If outliers are ignored then there will be some data that is not within the bounds.
+
+        Parameters
+        ----------
+        data : dict.
+            data is a dictionary. The keys are tuples (r, p, d) corresponding to
+            a reviewer r, a person p, and the day of the rating d. The values
+            are the corresponding rating of the person on that day by the reviewer.
+            In this case, r and p should be either ints or strings, and d should be
+            floats.
+        bounds : tuple of floats (default (0, 1)).
+            lower and upper bounds to scale the calibrated data to within.
+        with_improvement : bool (default False).
+            Whether to rescale with just sigma (with_improvement = False) or
+            with sigma and f (with_improvement = True).
+            See the report for more details.
+        ignore_outliers : float (default inf).
+            ignore_outliners dictates whether outliers should be ignored when doing the rescaling.
+            If ignore_outliers=float("inf") (this is default), then outliers will never be ignored.
+            If ignore_outliers=f for some float f, then all calibrated scores that are not within f
+            standard deviations of the mean of all calibrated scores will be treated as outliers and ignored.
+            If outliers are ignored then there will be some data that is not within the bounds.
+
+        Returns
+        -------
+        self
+
         """
 
         data = self.calibrate_data(data, with_improvement)
@@ -135,73 +239,133 @@ class CalibrationParameters:
         return self
 
     def sigma(self, r, y):
+        """sigma.
+
+        Computes sigma_r(y). See the report for more details.
+
+        Parameters
+        ----------
+        r : str or int.
+            Reviewer.
+        y : float.
+            Rating
+
+        Returns
+        -------
+        sigma_r(y).
+
+        """
         return self.parameters[('a', r)] * y + self.parameters[('b', r)]
 
     def f(self, p, d):
+        """f.
+
+        Computes f_p(d). See the report for more details.
+
+        Parameters
+        ----------
+        p : str or int.
+            Person.
+        d : float.
+            Day.
+
+        Returns
+        -------
+        f_p(d).
+
+        """
         return - self.parameters[('alpha', p)] * d
 
     def improvement_rate(self, p):
+        """improvement_rate.
+
+        Parameters
+        ----------
+        p : str or int.
+            Person.
+
+        Returns
+        -------
+        alpha_p : float.
+            See the report for more details.
+
+        """
         return self.parameters[('alpha', p)]
 
     def reviewer_scale(self, r):
+        """reviewer_scale.
+
+        Parameters
+        ----------
+        r : str or int.
+            Reviewer.
+
+        Returns
+        -------
+        a_r : float.
+            See the report for more details.
+
+        """
         return self.parameters[('a', r)]
 
     def reviewer_offset(self, r):
+        """reviewer_offset.
+
+        Parameters
+        ----------
+        r : str or int.
+            Reviewer.
+
+        Returns
+        -------
+        b_r : float.
+            See the report for more details.
+
+        """
         return self.parameters[('b', r)]
 
     def improvement_rates(self):
+        """improvement_rates.
+
+        Returns
+        -------
+        rates : dict.
+            Dictionary mapping persons p to their respective alpha_p.
+            See the report for more details.
+
+        """
         return {p: self.parameters[('alpha', p)] for p in self.P}
 
     def reviewer_scales(self):
+        """reviewer_scales.
+
+        Returns
+        -------
+        rates : dict.
+            Dictionary mapping reviewers r to their respective a_r.
+            See the report for more details.
+
+        """
         return {r: self.parameters[('a', r)] for r in self.R}
 
     def reviewer_offsets(self):
+        """reviewer_offsets.
+
+        Returns
+        -------
+        rates : dict.
+            Dictionary mapping reviewers r to their respective b_r.
+            See the report for more details.
+
+        """
         return {r: self.parameters[('b', r)] for r in self.R}
 
     def __str__(self):
+        """__str__.
+        
+        Returns
+        -------
+        String representation of this object.
+
+        """
         return "CalibrationParameters(%s)" % self.parameters
-
-
-
-if __name__ == "__main__":
-
-    import matplotlib.pyplot as plt
-
-    data = {
-        ('r0', 'p0', 0): 1,
-        ('r0', 'p1', 1): 3,
-        ('r0', 'p2', 2): 3,
-
-        ('r1', 'p2', 0): 3,
-        ('r1', 'p0', 1): 3,
-        ('r1', 'p1', 2): 4,
-
-        ('r2', 'p1', 0): 2,
-        ('r2', 'p2', 1): 2,
-        ('r2', 'p0', 2): 3,
-
-        ('r0', 'p3', 0): 1,
-        ('r1', 'p3', 1): 1,
-        ('r2', 'p3', 2): 1
-
-        # ('r0', 'p4', 0): 5,
-        # ('r1', 'p4', 1): 5,
-        # ('r2', 'p4', 2): 5
-    }
-
-    cp = calibrate_parameters(data, rating_delta=4)
-    calibrated_data = cp.rescale_parameters(data, (1, 5)).calibrate_data(data)
-    print({k: round(v, 2) for k, v in calibrated_data.items()})
-    print({k: round(v, 2) for k, v in cp.improvement_rates().items()})
-    # print(cd.average_daily_calibrated_ratings())
-    plt.figure()
-    # plt.title("First data")
-    plt.xlabel('raw rating')
-    plt.ylabel('calibrated rating')
-    ys = np.arange(1, 5, .01)
-    plt.plot(ys, cp.sigma('r0', ys), label='r0')
-    plt.plot(ys, cp.sigma('r1', ys), label='r1')
-    plt.plot(ys, cp.sigma('r2', ys), label='r2')
-    plt.legend()
-    plt.show()
-
