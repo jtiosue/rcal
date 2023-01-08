@@ -55,6 +55,12 @@ def test_simple_cases():
     }
     
     cp = calibrate_parameters(data)
+    cp1 = calibrate_parameters(data)
+    assert cp == cp1
+    cp2 = cp.copy()
+    cp2.parameters[('a', 'r1')] = cp.parameters[('a', 'r1')] - 1
+    assert cp != cp2
+
     cp.rescale_parameters(data)
     calibrated_data = cp.calibrate_data(data)
     assert all((0 <= round(v, 7) <= 1 for v in calibrated_data.values()))

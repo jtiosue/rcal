@@ -57,6 +57,26 @@ def calibrate_parameters(data, rating_delta=None, lam=1e-3):
     cp : rcal.CalibrationParameters object.
         Contains the information for the parameters calibrated from the data.
 
+    Example
+    -------
+    >>> data = {
+    >>>     ('r1', 'p1', 0): 2,
+    >>>     ('r1', 'p1', 1): 4,
+    >>>     ('r1', 'p1', 2): 5,
+    >>>     ('r2', 'p1', 0): 3,
+    >>>     ('r2', 'p1', 1): 4,
+    >>>     ('r2', 'p1', 2): 5,
+    >>>     ('r1', 'p2', 0): 0,
+    >>>     ('r1', 'p2', 1): 0,
+    >>>     ('r1', 'p2', 2): 0,
+    >>>     ('r2', 'p2', 0): 1,
+    >>>     ('r2', 'p2', 1): 0,
+    >>>     ('r2', 'p2', 2): 0
+    >>> }
+    >>> cp = calibrate_parameters(data)
+    >>> cp.rescale_parameters(data)
+    >>> calibrated_data = cp.calibrate_data(data)
+
     """
 
     if not data:
@@ -86,7 +106,8 @@ def calibrate_parameters(data, rating_delta=None, lam=1e-3):
 class CalibrationParameters:
     """CalibrationParameters.
 
-    Stuff.
+    Class to manage the calibration parameters 
+    alpha_p, a_r, and b_r. See the report for more details.
 
     """
 
@@ -369,3 +390,19 @@ class CalibrationParameters:
 
         """
         return "CalibrationParameters(%s)" % self.parameters
+
+    def copy(self):
+        """copy.
+
+        Returns a copy of self.
+
+        """
+        return CalibrationParameters(self.parameters, True)
+
+    def __eq__(self, other):
+        """__eq__.
+
+        Defines equality of parameters.
+
+        """
+        return self.parameters == other.parameters
