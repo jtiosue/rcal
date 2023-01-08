@@ -73,7 +73,7 @@ def test_simple_cases():
     for ((r, p, d), y) in data.items():
         assert np.allclose(
             calibrated_data[(r, p, d)], 
-            cp.sigma(r, y)
+            cp.calibrate_rating(r, y)
         )
 
     cp.rescale_parameters(data, (0., 4.), True)
@@ -83,7 +83,7 @@ def test_simple_cases():
     for ((r, p, d), y) in data.items():
         assert np.allclose(
             calibrated_data[(r, p, d)], 
-            cp.sigma(r, y) + cp.f(p, d)
+            cp.calibrate_rating(r, y) + cp.f(p, d)
         )
 
 def test_simple_cases_1():
@@ -111,6 +111,10 @@ def test_simple_cases_1():
     cp.improvement_rates()
     cp.reviewer_scales()
     cp.reviewer_offsets()
+
+    assert np.allclose(cp.uncalibrate_rating('r1', cp.calibrate_rating('r1', 1)), 1)
+
+    cp.improvement_function('p1', 1)
 
 
 def test_single_day():

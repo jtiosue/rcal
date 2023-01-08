@@ -259,10 +259,12 @@ class CalibrationParameters:
 
         return self
 
-    def sigma(self, r, y):
-        """sigma.
+    def calibrate_rating(self, r, y):
+        """calibrate_rating.
 
         Computes sigma_r(y). See the report for more details.
+        Given a reviewer r and a rating y that they gave, sigma_r(y)
+        is their calibrated rating.
 
         Parameters
         ----------
@@ -278,10 +280,35 @@ class CalibrationParameters:
         """
         return self.parameters[('a', r)] * y + self.parameters[('b', r)]
 
-    def f(self, p, d):
-        """f.
+    def uncalibrate_rating(self, r, y):
+        """uncalibrate_rating.
+
+        Computes sigma_r^{-1}(y). See the report for more details.
+        Given a reviewer r and a rating y that they gave, sigma_r(y)
+        is their calibrated rating. Hence, given a calibrated rating y
+        and a reviewer r, sigma_r^{-1}(y) is what reviewer r rated.
+
+        Parameters
+        ----------
+        r : str or int.
+            Reviewer.
+        y : float.
+            Rating
+
+        Returns
+        -------
+        sigma_r(y).
+
+        """
+        return (y - self.parameters[('b', r)]) / self.parameters[('a', r)]
+
+    def improvement_function(self, p, d):
+        """improvement_function.
 
         Computes f_p(d). See the report for more details.
+        Given a person p and a day d, f_p(d) is the improvement
+        function f_p(d) = - alpha_p d, hwere alpha_p is the improvement rate
+        of person p.
 
         Parameters
         ----------
