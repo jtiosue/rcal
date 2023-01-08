@@ -83,7 +83,7 @@ def test_simple_cases():
     for ((r, p, d), y) in data.items():
         assert np.allclose(
             calibrated_data[(r, p, d)], 
-            cp.calibrate_rating(r, y) + cp.f(p, d)
+            cp.calibrate_rating(r, y) + cp.improvement_function(p, d)
         )
 
 def test_simple_cases_1():

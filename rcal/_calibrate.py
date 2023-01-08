@@ -302,7 +302,7 @@ class CalibrationParameters:
         """
         return (y - self.parameters[('b', r)]) / self.parameters[('a', r)]
 
-    def improvement_function(self, p, d):
+    def improvement_function(self, p, d, final_day=0):
         """improvement_function.
 
         Computes f_p(d). See the report for more details.
@@ -316,13 +316,18 @@ class CalibrationParameters:
             Person.
         d : float.
             Day.
+        final_day : float (default 0).
+            Day to extend improvement to. Namely, if y is a calibrated
+            review for person p on day d, then 
+            y + improvement_function(p, d, final_day) will be that review
+            projected to the final_day.
 
         Returns
         -------
         f_p(d).
 
         """
-        return - self.parameters[('alpha', p)] * d
+        return self.parameters[('alpha', p)] * (final_day - d)
 
     def improvement_rate(self, p):
         """improvement_rate.
