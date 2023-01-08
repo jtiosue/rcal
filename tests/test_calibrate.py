@@ -16,7 +16,7 @@
 Contains tests for the calibrate_parameters function.
 """
 
-from rcal import calibrate_parameters, RescaleException
+from rcal import calibrate_parameters, RescaleException, CalibrationParameters
 import random
 import numpy as np
 
