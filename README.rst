@@ -79,3 +79,4 @@ To do
 
 - Clean up code
 - Add docstrings
+- Maybe generate ``indices`` inside the ``_generate_matrix`` functions instead of inside the ``calibrate_parameters`` function.

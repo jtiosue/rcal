@@ -10,6 +10,9 @@ def py_generate_matrix_slow(data, indices, rating_delta, lam):
 
     indices is a dictionary mapping parameters to unique integer indices. keys are
     ('a', r), ('b', r), and ('alpha', p), for reviewers r and people p.
+    It must be that indices[('a', r)] takes values 0 through num_reviewers - 1,
+    indices[('b', r)] takes values num_reviewers through 2 num_reviewers - 1,
+    and indices[('alpha', p)] takes values 2 num_reviewers and above.
 
     rating_delta is the range of the allowed ratings. E.g. for 1 through 5 stars,
     rating_delta = 5-1 = 4.
@@ -205,6 +208,9 @@ def py_generate_matrix(data, indices, rating_delta, lam):
 
     indices is a dictionary mapping parameters to unique integer indices. keys are
     ('a', r), ('b', r), and ('alpha', p), for reviewers r and people p.
+    It must be that indices[('a', r)] takes values 0 through num_reviewers - 1,
+    indices[('b', r)] takes values num_reviewers through 2 num_reviewers - 1,
+    and indices[('alpha', p)] takes values 2 num_reviewers and above.
 
     rating_delta is the range of the allowed ratings. E.g. for 1 through 5 stars,
     rating_delta = 5-1 = 4.

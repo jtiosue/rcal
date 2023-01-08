@@ -51,6 +51,12 @@ static PyObject* c_generate_matrix(PyObject* self, PyObject* args) {
     ``rcal._c_generate_matrix.c_generate_matrix``. See the docstring above
     for details on what ``args`` should be.
     (data, indices, rating_delta, lam)
+
+    indices is a dictionary mapping parameters to unique integer indices. keys are
+    ('a', r), ('b', r), and ('alpha', p), for reviewers r and people p.
+    It must be that indices[('a', r)] takes values 0 through num_reviewers - 1,
+    indices[('b', r)] takes values num_reviewers through 2 num_reviewers - 1,
+    and indices[('alpha', p)] takes values 2 num_reviewers and above.
     */
     PyObject *data, *indices, *py_rating_delta, *py_lam;
     if (!PyArg_ParseTuple(args, "OOOO",

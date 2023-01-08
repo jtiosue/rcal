@@ -33,14 +33,7 @@ def calibrate_parameters(data, rating_delta=None, lam=1e-3):
 
     z = np.linalg.solve(*c_generate_matrix(data, indices, rating_delta, lam))
 
-    parameters = {}
-    for r in R:
-        parameters[('a', r)] = z[indices[('a', r)]]
-        parameters[('b', r)] = z[indices[('b', r)]]
-    for p in P:
-        parameters[('alpha', p)] = z[indices[('alpha', p)]]
-
-    return CalibrationParameters(parameters)
+    return CalibrationParameters({k: z[v] for k, v in indices.items()})
 
 
 
