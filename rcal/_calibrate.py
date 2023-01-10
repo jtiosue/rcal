@@ -170,21 +170,20 @@ class CalibrationParameters:
         clip = lambda x: min(clip_endpoints[1], max(clip_endpoints[0], x))
 
         calibrated_data = {}
-        w = float(with_improvement)
 
-        for ((r, p, d), y) in data.items():
+        for t, y in data.items():
             if isinstance(y, list):
-                calibrated_data[(r, p, d)] = [
+                calibrated_data[t] = [
                     clip(
-                        self.parameters[('a', r)] * yy + self.parameters[('b', r)]
-                        - w * self.parameters[('alpha', p)] * d
+                        self.parameters[('a', t[0])] * yy + self.parameters[('b', t[0])]
+                        - (self.parameters[('alpha', t[1])] * t[2] if with_improvement else 0.)
                     )
                     for yy in y
                 ]
             else:
-                calibrated_data[(r, p, d)] = clip(
-                    self.parameters[('a', r)] * y + self.parameters[('b', r)]
-                    - w * self.parameters[('alpha', p)] * d
+                calibrated_data[t] = clip(
+                    self.parameters[('a', t[0])] * y + self.parameters[('b', t[0])]
+                    - (self.parameters[('alpha', t[1])] * t[2] if with_improvement else 0.)
                 )
         
         return calibrated_data
