@@ -38,6 +38,8 @@ Or you can try:
 Example usage
 -------------
 
+See the `notebook examples <https://github.com/jtiosue/rcal/tree/main/examples>`_ for a detailed example. Here we do a quick *Hello World* example.
+
 .. code:: python
     
     from rcal import calibrate_parameters
@@ -71,10 +73,3 @@ Example usage
     
     # get the improvement rates
     print(cp.improvement_rates())
-
-
-
-To do
------
-
-- Maybe generate ``indices`` inside the ``_generate_matrix`` functions instead of inside the ``calibrate_parameters`` function.
