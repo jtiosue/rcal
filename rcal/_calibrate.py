@@ -111,20 +111,22 @@ class CalibrationParameters:
 
     """
 
-    def __init__(self, parameters, copy=False):
+    def __init__(self, parameters=None, copy=False):
         """__init__.
 
         Parameters
         ----------
-        parameters : dict.
-            Dictionary mapping the parameters ('a', r), ('b', r) and ('alpha', p)
+        parameters : dict (default None).
+            Dictionary mapping the parameters ('a', r), ('b', r) and ('alpha', p).
             to their respective floats, where r and p denote reviewers and persons.
+            If parameters is set to None (default), then it will be set to the empty dict.
         copy : bool (default False).
             Whether or not to internally copy the parameters dictionary.
 
         """
-
-        if copy:
+        if parameters is None:
+            self.parameters = {}
+        elif copy:
             self.parameters = parameters.copy()
         else:
             self.parameters = parameters
@@ -137,7 +139,7 @@ class CalibrationParameters:
             elif t == 'alpha':
                 self.P.add(i)
 
-    def calibrate_data(self, data, with_improvement=False):
+    def calibrate_data(self, data, with_improvement=False, clip_endpoints=(-float('inf'), float('inf'))):
         """calibrate_data.
 
         Uses the internal parameters to calibrate ``data``.
@@ -154,6 +156,10 @@ class CalibrationParameters:
             Whether to calibrate with just sigma (with_improvement = False) or
             with sigma and f (with_improvement = True).
             See the report for more details.
+        clip_endpionts : tuple of two floats (default (-inf, inf)).
+            Any calibrated data that is > clip_endpoints[1] will be set to clip_endpoints[1].
+            Any calibrated data that is < clip_endpoints[0[ will be set to clip_endpoints[0].
+            By default, clip_endpoints = (-float('inf'), float('inf')) so that no clipping occurs.
 
         Returns
         --------
@@ -161,6 +167,7 @@ class CalibrationParameters:
             Same shape as data.
 
         """
+        clip = lambda x: min(clip_endpoints[1], max(clip_endpoints[0], x))
 
         calibrated_data = {}
         w = float(with_improvement)
@@ -168,12 +175,14 @@ class CalibrationParameters:
         for ((r, p, d), y) in data.items():
             if isinstance(y, list):
                 calibrated_data[(r, p, d)] = [
-                    self.parameters[('a', r)] * yy + self.parameters[('b', r)]
-                    - w * self.parameters[('alpha', p)] * d
+                    clip(
+                        self.parameters[('a', r)] * yy + self.parameters[('b', r)]
+                        - w * self.parameters[('alpha', p)] * d
+                    )
                     for yy in y
                 ]
             else:
-                calibrated_data[(r, p, d)] = (
+                calibrated_data[(r, p, d)] = clip(
                     self.parameters[('a', r)] * y + self.parameters[('b', r)]
                     - w * self.parameters[('alpha', p)] * d
                 )
@@ -218,6 +227,10 @@ class CalibrationParameters:
         for v in data.values():
             vals.extend(v) if isinstance(v, list) else vals.append(v)
         vals.sort()
+
+        if not vals:
+            raise RescaleException("Cannot rescale based on no data")
+
         y0, y1 = vals[0], vals[-1]
 
         # maybe change this to a warning unless exactly zero?
@@ -259,7 +272,7 @@ class CalibrationParameters:
 
         return self
 
-    def calibrate_rating(self, r, y):
+    def calibrate_rating(self, r, y, clip_endpoints=(-float('inf'), float('inf'))):
         """calibrate_rating.
 
         Computes sigma_r(y). See the report for more details.
@@ -272,13 +285,24 @@ class CalibrationParameters:
             Reviewer.
         y : float.
             Rating
+        clip_endpionts : tuple of two floats (default (-inf, inf)).
+            If sigma_r(y) > clip_endpoints[1], then this function returns clip_endpoints[1].
+            If sigma_r(y) < clip_endpoints[0], then this function returns clip_endpoints[0].
+            By default, clip_endpoints = (-float('inf'), float('inf')) so that no clipping occurs.
 
         Returns
         -------
-        sigma_r(y).
+        sigma_r(y) : float.
+            See the report for details.
 
         """
-        return self.parameters[('a', r)] * y + self.parameters[('b', r)]
+        return min(
+            clip_endpoints[1],
+            max(
+                clip_endpoints[0],
+                self.parameters[('a', r)] * y + self.parameters[('b', r)]
+            )
+        )
 
     def uncalibrate_rating(self, r, y):
         """uncalibrate_rating.
@@ -297,7 +321,8 @@ class CalibrationParameters:
 
         Returns
         -------
-        sigma_r(y).
+        sigma_r^{-1}(y) : float.
+            See the report for details.
 
         """
         return (y - self.parameters[('b', r)]) / self.parameters[('a', r)]
@@ -324,7 +349,8 @@ class CalibrationParameters:
 
         Returns
         -------
-        f_p(d).
+        f_p(d) : float.
+            See the report for details.
 
         """
         return self.parameters[('alpha', p)] * (final_day - d)
@@ -345,6 +371,22 @@ class CalibrationParameters:
         """
         return self.parameters[('alpha', p)]
 
+    def set_improvement_rate(self, p, alpha):
+        """set_improvement_rate.
+
+        Set the internal parameter of person p's improvement rate to be alpha.
+
+        Parameters
+        ----------
+        p : str or int.
+            Person.
+        alpha : float.
+            Improvement rate to set.
+
+        """
+        self.parameters[('alpha', p)] = alpha
+        self.P.add(p)
+
     def reviewer_scale(self, r):
         """reviewer_scale.
 
@@ -360,6 +402,22 @@ class CalibrationParameters:
 
         """
         return self.parameters[('a', r)]
+
+    def set_reviewer_scale(self, r, a):
+        """set_reviewer_scale.
+
+        Set the internal parameter of reviewer r's scale to be a.
+
+        Parameters
+        ----------
+        r : str or int.
+            Reviewer.
+        a : float.
+            Reviewer scale to set.
+
+        """
+        self.parameters[('a', r)] = a
+        self.R.add(r)
 
     def reviewer_offset(self, r):
         """reviewer_offset.
@@ -377,6 +435,22 @@ class CalibrationParameters:
         """
         return self.parameters[('b', r)]
 
+    def set_reviewer_offset(self, r, b):
+        """set_reviewer_offset.
+
+        Set the internal parameter of reviewer r's offset to be b.
+
+        Parameters
+        ----------
+        r : str or int.
+            Reviewer.
+        b : float.
+            Reviewer offset to set.
+
+        """
+        self.parameters[('b', r)] = b
+        self.R.add(r)
+
     def improvement_rates(self):
         """improvement_rates.
 
@@ -388,6 +462,21 @@ class CalibrationParameters:
 
         """
         return {p: self.parameters[('alpha', p)] for p in self.P}
+
+    def set_improvement_rates(self, alphas):
+        """set_improvement_rates.
+
+        Set the internal parameter of each person p's improvement rate to be alpha[p].
+
+        Parameters
+        ----------
+        alphas : dict.
+            alphas[p] is a float.
+
+        """
+        for p, alpha in alphas.items():
+            self.parameters[('alpha', p)] = alpha
+            self.P.add(p)
 
     def reviewer_scales(self):
         """reviewer_scales.
@@ -401,6 +490,21 @@ class CalibrationParameters:
         """
         return {r: self.parameters[('a', r)] for r in self.R}
 
+    def set_reviewer_scales(self, a):
+        """set_reviewer_scales.
+
+        Set the internal parameter of reviewer r's scale to be a[r].
+
+        Parameters
+        ----------
+        a : dict.
+             a[r] is a float.
+
+        """
+        for r, aa in a.items():
+            self.parameters[('a', r)] = aa
+            self.R.add(r)
+
     def reviewer_offsets(self):
         """reviewer_offsets.
 
@@ -412,6 +516,21 @@ class CalibrationParameters:
 
         """
         return {r: self.parameters[('b', r)] for r in self.R}
+
+    def set_reviewer_offsets(self, bs):
+        """set_reviewer_offsets.
+
+        Set the internal parameter of reviewer r's offset to be b[r].
+
+        Parameters
+        ----------
+        bs : dict.
+             bs[r] is a float.
+
+        """
+        for r, b in bs.items():
+            self.parameters[('b', r)] = b
+            self.R.add(r)
 
     def __str__(self):
         """__str__.

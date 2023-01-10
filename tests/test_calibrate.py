@@ -189,6 +189,23 @@ def test_ignore_outliers():
     cp.rescale_parameters(data, ignore_outliers=2.5)
     calibrated_data = cp.calibrate_data(data)
     assert calibrated_data[('r2', 'p1', 1)] > 1
+    assert cp.calibrate_rating('r2', data[('r2', 'p1', 1)]) > 1
+    calibrated_data = cp.calibrate_data(data, clip_endpoints=(0, 1))
+    np.testing.assert_allclose(calibrated_data[('r2', 'p1', 1)], 1)
+    np.testing.assert_allclose(
+        cp.calibrate_rating('r2', data[('r2', 'p1', 1)], clip_endpoints=(0, 1)), 
+        1
+    )
+    cp.rescale_parameters(data)
+    calibrated_data = cp.calibrate_data(data)
+    assert 0 <= calibrated_data[('r2', 'p1', 1)] <= 1
 
     with np.testing.assert_raises(RescaleException):
         cp.rescale_parameters(data, ignore_outliers=0)
+
+
+def test_error():
+
+    cp = CalibrationParameters({})
+    with np.testing.assert_raises(RescaleException):
+        cp.rescale_parameters({})

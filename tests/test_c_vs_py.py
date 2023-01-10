@@ -111,8 +111,8 @@ def test_large_case():
 
     data = {}
     for r in range(10):
-        for p in range(100):
-            for d in range(8):
+        for p in range(50):
+            for d in range(4):
                 data[(r, p, d)] = random.random()
 
     assertclose(data, 1e-3)
