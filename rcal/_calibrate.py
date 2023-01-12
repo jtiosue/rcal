@@ -243,7 +243,7 @@ class CalibrationParameters:
             raise RuntimeError("ignore_outliers must be positive")
         elif ignore_outliers != float("inf"):
             mean_rating, std_rating = np.mean(vals), np.std(vals)
-            if std_rating < RescaleException.threshold:
+            if std_rating < 1e-15:
                 RcalWarning.warn("Standard deviation is too small to ignore outliers")
                 return self
             i = 0
