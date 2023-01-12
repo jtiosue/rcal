@@ -20,15 +20,7 @@ Contains the main functionality of rcal.
 
 from rcal._c_generate_matrix import c_generate_matrix
 import numpy as np
-
-
-# maybe change this to a warning?
-class RescaleException(Exception):
-    """
-    Raised when there is an error when trying to rescale
-    parameters.
-    """
-    threshold = 1e-10
+from rcal import RcalWarning
 
 
 def calibrate_parameters(data, rating_delta=None, lam=1e-3):
@@ -97,10 +89,19 @@ def calibrate_parameters(data, rating_delta=None, lam=1e-3):
     for i, p in enumerate(P):
         indices[('alpha', p)] = i + 2 * len(R)
 
-    z = np.linalg.solve(*c_generate_matrix(data, indices, rating_delta, lam))
+    try:
+        z = np.linalg.solve(
+            *c_generate_matrix(data, indices, rating_delta, lam)
+        ).tolist()
+        params = {k: z[v] for k, v in indices.items()}
+    except np.linalg.LinAlgError as e:
+        RcalWarning.warn("np.linalg.LinAlgError: " + str(e))
+        params = {('alpha', p): 0. for p in P}
+        for r in R:
+            params[('a', r)] = 1.
+            params[('b', r)] = 0.
 
-    return CalibrationParameters({k: z[v] for k, v in indices.items()})
-
+    return CalibrationParameters(params)
 
 
 class CalibrationParameters:
@@ -228,21 +229,23 @@ class CalibrationParameters:
         vals.sort()
 
         if not vals:
-            raise RescaleException("Cannot rescale based on no data")
+            RcalWarning.warn("Cannot rescale based on no data")
+            return self
 
         y0, y1 = vals[0], vals[-1]
 
-        # maybe change this to a warning unless exactly zero?
-        if abs(y1 - y0) < RescaleException.threshold:
-            raise RescaleException("Calibrated reviews are too close together to rescale")
+        if abs(y1 - y0) < 1e-15:
+            RcalWarning.warn("Calibrated reviews are too close together to rescale")
+            return self
 
         # remove outliers
         if ignore_outliers <= 0:
-            raise RescaleException("ignore_outliers must be positive")
+            raise RuntimeError("ignore_outliers must be positive")
         elif ignore_outliers != float("inf"):
             mean_rating, std_rating = np.mean(vals), np.std(vals)
             if std_rating < RescaleException.threshold:
-                raise RescaleException("Standard deviation is too small to ignore outliers")
+                RcalWarning.warn("Standard deviation is too small to ignore outliers")
+                return self
             i = 0
             while (mean_rating - y0) / std_rating > ignore_outliers:
                 i += 1
@@ -253,8 +256,9 @@ class CalibrationParameters:
                 y1 = vals[i]
 
             # check again
-            if abs(y1 - y0) < RescaleException.threshold:
-                raise RescaleException("Calibrated reviews are too close together to rescale")
+            if abs(y1 - y0) < 1e-15:
+                RcalWarning.warn("Calibrated reviews are too close together to rescale")
+                return self
 
         # calibrate
 

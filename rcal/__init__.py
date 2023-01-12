@@ -19,6 +19,7 @@ See the rcal.calibrate_parameters function and docstring.
 """
 
 from ._version import *
+from ._warn import *
 from ._c_generate_matrix import *
 from ._py_generate_matrix import *
 from ._calibrate import *
