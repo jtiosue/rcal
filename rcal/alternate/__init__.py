@@ -12,19 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A module for calibrating reviews.
+"""Calibrating reviews with the alternate method.
 
-See the rcal.calibrate_parameters function and docstring.
+See the rcal.alternate.calibrate_parameters function and docstring.
 
 """
 
-from ._version import *
-from ._warn import *
-
-# main calibration
-from ._c_generate_matrix import *
-from ._py_generate_matrix import *
 from ._calibrate import *
-
-# alternate calibration
-from . import alternate
