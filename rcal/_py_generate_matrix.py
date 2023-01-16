@@ -208,7 +208,7 @@ def py_generate_matrix_slow(data, indices, rating_delta, lam):
 
 
     # get rid of singular behavior of A wrt b
-    # remove equation for b0 and replace with the condition hat
+    # remove equation for b0 and replace with the condition that
     # the first b is zero
     for i in indices.values():
         A[len(R), i] = 0.

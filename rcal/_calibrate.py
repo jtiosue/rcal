@@ -23,7 +23,7 @@ import numpy as np
 from rcal import RcalWarning
 
 
-def calibrate_parameters(data, rating_delta=None, lam=1e-3):
+def calibrate_parameters(data, rating_delta=None, lam=1e-5):
     """calibrate_parameters.
 
     Calibrate the reviewer and persons parameters from the data.
@@ -40,7 +40,7 @@ def calibrate_parameters(data, rating_delta=None, lam=1e-3):
         rating_delta is the range of the allowed ratings. E.g. 
         for 1 through 5 stars, rating_delta = 5-1 = 4.
         If rating_delta is None, then it will be automatically computed.
-    lam : float (default .001).
+    lam : float (default .00001).
         lam is the multiplier from the report. By default, this should be very small
         but nonzero.
 

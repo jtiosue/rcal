@@ -22,7 +22,7 @@ import numpy as np
 from rcal import RcalWarning
 
 
-def calibrate_parameters(data):
+def calibrate_parameters(data, rating_delta=None, lam=1e-5):
     """calibrate_parameters.
 
     Calibrate the reviewer and persons parameters from the data
@@ -36,6 +36,13 @@ def calibrate_parameters(data):
         are the corresponding rating of the person on that day by the reviewer.
         In this case, r and p should be either ints or strings, and d should be
         floats.
+    rating_delta : float (default None).
+        rating_delta is the range of the allowed ratings. E.g. 
+        for 1 through 5 stars, rating_delta = 5-1 = 4.
+        If rating_delta is None, then it will be automatically computed.
+    lam : float (default .00001).
+        lam is the multiplier from the report. By default, this should be very small
+        but nonzero.
 
     Returns
     -------
@@ -67,6 +74,11 @@ def calibrate_parameters(data):
     if not data:
         return CalibrationParameters({})
 
+    if rating_delta is None:
+        rating_delta = max(data.values()) - min(data.values())
+
+    N = len(data)
+
     P, R = {}, {}
     for (r, p, d) in data:
         P.setdefault(p, set()).add((r, d))
@@ -74,78 +86,84 @@ def calibrate_parameters(data):
 
     indices = {}
     for i, r in enumerate(R):
-        indices[('c', r)] = i
+        indices[('e', r)] = i
+        indices[('c', r)] = i + len(R)
     for i, p in enumerate(P):
-        indices[('beta', p)] = i + len(R)
-        indices[('gamma', p)] = i + len(R) + len(P)
+        indices[('beta', p)] = i + 2*len(R)
+        indices[('gamma', p)] = i + 2*len(R) + len(P)
 
     # create A and c matrices
     A = np.zeros((len(indices), len(indices)))
     c = np.zeros(len(indices))
 
-    # for ((r, p, d), y) in data.items():
-    #     cr = indices[('c', r)]
-    #     betap = indices[('beta', p)]
-    #     gammap = indices[('gamma', p)]
 
-    #     # derivative wrt cr
-    #     c[cr] += y
-    #     A[cr, cr] += 1.
-    #     A[cr, gammap] += 1.
-    #     A[cr, betap] += d
-
-    #     # derivative wrt gammap
-    #     c[gammap] += y
-    #     A[gammap, cr] += 1.
-    #     A[gammap, gammap] += 1.
-    #     A[gammap, betap] += d
-
-    #     # derivative wrt betap
-    #     c[betap] += y
-    #     A[betap, cr] += 1.
-    #     A[betap, gammap] += 1.
-    #     A[betap, betap] += d
-
-
-    # derivative wrt cr
+    # derivative wrt r stuff
     for r in R:
+        er = indices[('e', r)]
         cr = indices[('c', r)]
+
+        # # derivatives wrt er in the lambda term
+        A[er,er] += (2 * lam / len(R)) * rating_delta**2
+        c[er] += (2 * lam / len(R)) * rating_delta
+
         for (p, d) in R[r]:
             betap = indices[('beta', p)]
             gammap = indices[('gamma', p)]
+            rating = data[(r, p, d)]
 
-            A[cr, cr] += 1.
-            A[cr, gammap] += 1.
-            A[cr, betap] += d
-            c[cr] += data[(r, p, d)]
+            # derivatives wrt er in the main term
+            A[er,er] += (2. / N) * rating**2
+            A[er,cr] += (2. / N) * rating
+            A[er,betap] -= (2. / N) * rating * d
+            A[er,gammap] -= (2. / N) * rating
 
+            # derivatives wrt cr in the main term
+            A[cr,er] += (2. / N) * rating
+            A[cr,cr] += (2. / N)
+            A[cr,betap] -= (2. / N) * d
+            A[cr,gammap] -= (2. / N)
+
+
+    # derivative wrt p stuff
     for p in P:
         betap = indices[('beta', p)]
         gammap = indices[('gamma', p)]
+
         for (r, d) in P[p]:
+            er = indices[('e', r)]
             cr = indices[('c', r)]
+            rating = data[(r, p, d)]
 
-            # derivative wrt gammap
-            A[gammap, cr] += 1.
-            A[gammap, gammap] += 1.
-            A[gammap, betap] += d
-            c[gammap] += data[(r, p, d)]
+            # derivative wrt beta
+            A[betap,er] -= (2. / N) * d * rating
+            A[betap,cr] -= (2. / N) * d
+            A[betap,betap] += (2. / N) * d**2
+            A[betap,gammap] += (2. / N) * d
 
-            # derivative wrts betap
-            A[betap, cr] += d
-            A[betap, gammap] += d
-            A[betap, betap] += d**2
-            c[betap] += data[(r, p, d)] * d
+            # derivative wrt gamma
+            A[gammap,er] -= (2. / N) * rating
+            A[gammap,cr] -= (2. / N)
+            A[gammap,betap] += (2. / N) * d
+            A[gammap,gammap] += (2. / N)
+
 
     # get rid of singular behavior of A wrt c
     # remove equation for c0 and replace with the condition that
     # the first c is zero
     for i in indices.values():
-        A[0, i] = 0.
-    A[0, 0] = 1.
-    c[0] = 0.
+        A[len(R), i] = 0.
+    A[len(R), len(R)] = 1.
+    c[len(R)] = 0.
 
-    # get rid of singular behavior of A wrt to alpha
+    # get rid of singular behavior of A wrt gamma
+    # remove equation for gamma0 and replace with the condition that
+    # the first gamma is zero
+    # for i in indices.values():
+    #     A[2*len(R) + len(P), i] = 0.
+    # A[2*len(R) + len(P), 2*len(R) + len(P)] = 1.
+    # c[2*len(R) + len(P)] = 0.
+
+    # get rid of singular behavior of A wrt to beta
     # if a person only has one day of rating
     for p in P:
         if len(set(d for (_, d) in P[p])) == 1:
@@ -160,14 +178,13 @@ def calibrate_parameters(data):
         params = {k: z[v] for k, v in indices.items()}
     except np.linalg.LinAlgError as e:
         RcalWarning.warn(str(e))
-        params = {('c', r): 0. for r in R}
+        params = {}
+        for r in R:
+            params[('e', r)] = 1.
+            params[('c', r)] = 0.
         for p in P:
             params[('beta', p)] = 0.
             params[('gamma', p)] = float(np.mean([data[(r, p, d)] for (r, d) in P[p]]))
-
-    # reviewer scales; set to 1.
-    for r in R:
-        params[('e', r)] = 1.
 
     return CalibrationParameters(params)
 
@@ -240,11 +257,11 @@ class CalibrationParameters:
         for t, y in data.items():
             if isinstance(y, list):
                 calibrated_data[t] = [
-                    clip((yy - self.parameters[('c', t[0])]) / self.parameters[('e', t[0])])
+                    clip(self.parameters[('e', t[0])] * yy + self.parameters[('c', t[0])])
                     for yy in y
                 ]
             else:
-                calibrated_data[t] = clip((y - self.parameters[('c', t[0])]) / self.parameters[('e', t[0])])
+                calibrated_data[t] = clip(self.parameters[('e', t[0])] * y + self.parameters[('c', t[0])])
         
         return calibrated_data
 
@@ -321,8 +338,9 @@ class CalibrationParameters:
         ran = upper - lower
 
         for r in self.R:
-            self.parameters[('e', r)] /= ran / (y1 - y0)
-            self.parameters[('c', r)] += (ran * y0 / (y1 - y0) - lower) * self.parameters[('e', r)]
+            self.parameters[('e', r)] *= ran / (y1 - y0)
+            self.parameters[('c', r)] = lower + ran * (self.parameters[('c', r)] - y0) / (y1 - y0)
+
         for p in self.P:
             self.parameters[('beta', p)] *= ran / (y1 - y0)
             self.parameters[('gamma', p)] = lower + ran * (self.parameters[('gamma', p)] - y0) / (y1 - y0)
@@ -332,8 +350,8 @@ class CalibrationParameters:
     def calibrate_rating(self, r, y, clip_endpoints=(-float('inf'), float('inf'))):
         """calibrate_rating.
 
-        Computes chi_r^{-1}(y). See the report for more details.
-        Given a reviewer r and a rating y that they gave, chi_r^{-1}(y)
+        Computes xi_r(y). See the report for more details.
+        Given a reviewer r and a rating y that they gave, xi_r(y)
         is their calibrated rating.
 
         Parameters
@@ -343,13 +361,13 @@ class CalibrationParameters:
         y : float.
             Rating
         clip_endpionts : tuple of two floats (default (-inf, inf)).
-            If chi_r{-1}(y) > clip_endpoints[1], then this function returns clip_endpoints[1].
-            If chi_r{-1}(y) < clip_endpoints[0], then this function returns clip_endpoints[0].
+            If xi_r(y) > clip_endpoints[1], then this function returns clip_endpoints[1].
+            If xi_r(y) < clip_endpoints[0], then this function returns clip_endpoints[0].
             By default, clip_endpoints = (-float('inf'), float('inf')) so that no clipping occurs.
 
         Returns
         -------
-        chi_r{-1}(y) : float.
+        xi_r(y) : float.
             See the report for details.
 
         """
@@ -357,17 +375,17 @@ class CalibrationParameters:
             clip_endpoints[1],
             max(
                 clip_endpoints[0],
-                (y - self.parameters[('c', r)]) / self.parameters[('e', r)]
+                self.parameters[('e', r)] * y + self.parameters[('c', r)]
             )
         )
 
     def uncalibrate_rating(self, r, y):
         """uncalibrate_rating.
 
-        Computes chi_r(y). See the report for more details.
-        Given a reviewer r and a rating y that they gave, chi_r{-1}(y)
+        Computes xi_r^{-1}(y). See the report for more details.
+        Given a reviewer r and a rating y that they gave, xi_r(y)
         is their calibrated rating. Hence, given a calibrated rating y
-        and a reviewer r, chi_r(y) is what reviewer r rated.
+        and a reviewer r, xi_r^{-1](y) is what reviewer r rated.
 
         Parameters
         ----------
@@ -378,11 +396,11 @@ class CalibrationParameters:
 
         Returns
         -------
-        chi_r(y) : float.
+        xi_r^{-1}(y) : float.
             See the report for details.
 
         """
-        return self.parameters[('e', r)] * y + self.parameters[('c', r)]
+        return (y - self.parameters[('c', r)]) / self.parameters[('e', r)]
 
     def performance_function(self, p, d):
         """performance_function.
@@ -516,7 +534,7 @@ class CalibrationParameters:
             See the report for more details.
 
         """
-        return self.parameters[('d', r)]
+        return self.parameters[('e', r)]
 
     def set_reviewer_scale(self, r, e):
         """set_reviewer_scale.
