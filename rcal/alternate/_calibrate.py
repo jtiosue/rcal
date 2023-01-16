@@ -226,7 +226,7 @@ class CalibrationParameters:
             elif t in ('beta', 'gamma'):
                 self.P.add(i)
 
-    def calibrate_data(self, data, clip_endpoints=(-float('inf'), float('inf'))):
+    def calibrate_data(self, data, with_improvement=False, clip_endpoints=(-float('inf'), float('inf'))):
         """calibrate_data.
 
         Uses the internal parameters to calibrate ``data``.
@@ -239,6 +239,9 @@ class CalibrationParameters:
             are the corresponding rating of the person on that day by the reviewer.
             In this case, r and p should be either ints or strings, and d should be
             floats.
+        with_improvement : bool (default False).
+            Whether to calibrate with just xi (with_improvement = False) or
+            with xi and the improvement rate beta (with_improvement = True).
         clip_endpionts : tuple of two floats (default (-inf, inf)).
             Any calibrated data that is > clip_endpoints[1] will be set to clip_endpoints[1].
             Any calibrated data that is < clip_endpoints[0[ will be set to clip_endpoints[0].
@@ -257,15 +260,21 @@ class CalibrationParameters:
         for t, y in data.items():
             if isinstance(y, list):
                 calibrated_data[t] = [
-                    clip(self.parameters[('e', t[0])] * yy + self.parameters[('c', t[0])])
+                    clip(
+                        self.parameters[('e', t[0])] * yy + self.parameters[('c', t[0])]
+                        - (self.parameters[('beta', t[1])] * t[2] if with_improvement else 0.)
+                    )
                     for yy in y
                 ]
             else:
-                calibrated_data[t] = clip(self.parameters[('e', t[0])] * y + self.parameters[('c', t[0])])
+                calibrated_data[t] = clip(
+                    self.parameters[('e', t[0])] * y + self.parameters[('c', t[0])]
+                    - (self.parameters[('beta', t[1])] * t[2] if with_improvement else 0.)
+                )
         
         return calibrated_data
 
-    def rescale_parameters(self, data, bounds=(0., 1.), ignore_outliers=float("inf")):
+    def rescale_parameters(self, data, bounds=(0., 1.), with_improvement=False, ignore_outliers=float("inf")):
         """rescale_parameters.
 
         Rescales the internal parameters based on the input data.
@@ -280,6 +289,9 @@ class CalibrationParameters:
             floats.
         bounds : tuple of floats (default (0, 1)).
             lower and upper bounds to scale the calibrated data to within.
+        with_improvement : bool (default False).
+            Whether to rescale with just xi (with_improvement = False) or
+            with xi and the improvement rate beta (with_improvement = True).
         ignore_outliers : float (default inf).
             ignore_outliners dictates whether outliers should be ignored when doing the rescaling.
             If ignore_outliers=float("inf") (this is default), then outliers will never be ignored.
@@ -293,7 +305,7 @@ class CalibrationParameters:
 
         """
 
-        data = self.calibrate_data(data)
+        data = self.calibrate_data(data, with_improvement)
 
         vals = []
         for v in data.values():
@@ -402,7 +414,7 @@ class CalibrationParameters:
         """
         return (y - self.parameters[('c', r)]) / self.parameters[('e', r)]
 
-    def performance_function(self, p, d):
+    def performance_function(self, p, d, clip_endpoints=(-float('inf'), float('inf'))):
         """performance_function.
 
         Computes g_p(d). See the report for more details.
@@ -415,6 +427,10 @@ class CalibrationParameters:
             Person.
         d : float.
             Day.
+        clip_endpionts : tuple of two floats (default (-inf, inf)).
+            If g_p(d) > clip_endpoints[1], then this function returns clip_endpoints[1].
+            If g_p(d) < clip_endpoints[0], then this function returns clip_endpoints[0].
+            By default, clip_endpoints = (-float('inf'), float('inf')) so that no clipping occurs.
 
         Returns
         -------
@@ -422,7 +438,13 @@ class CalibrationParameters:
             See the report for details.
 
         """
-        return self.parameters[('beta', p)] * d + self.parameters[('gamma', p)]
+        return min(
+            clip_endpoints[1],
+            max(
+                clip_endpoints[0],
+                self.parameters[('beta', p)] * d + self.parameters[('gamma', p)]
+            )
+        )
 
     def improvement_rate(self, p):
         """improvement_rate.
