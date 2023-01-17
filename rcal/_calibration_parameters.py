@@ -73,8 +73,8 @@ class CalibrationParameters:
             In this case, r and p should be either ints or strings, and d should be
             floats.
         with_improvement : bool (default False).
-            Whether to calibrate with just xi (with_improvement = False) or
-            with xi and the improvement rate alpha (with_improvement = True).
+            Whether to calibrate with just sigma (with_improvement = False) or
+            with sigma and the improvement rate alpha (with_improvement = True).
         clip_endpionts : tuple of two floats (default (-inf, inf)).
             Any calibrated data that is > clip_endpoints[1] will be set to clip_endpoints[1].
             Any calibrated data that is < clip_endpoints[0[ will be set to clip_endpoints[0].
@@ -123,8 +123,8 @@ class CalibrationParameters:
         bounds : tuple of floats (default (0, 1)).
             lower and upper bounds to scale the calibrated data to within.
         with_improvement : bool (default False).
-            Whether to rescale with just xi (with_improvement = False) or
-            with xi and the improvement rate alpha (with_improvement = True).
+            Whether to rescale with just sigma (with_improvement = False) or
+            with sigma and the improvement rate alpha (with_improvement = True).
         ignore_outliers : float (default inf).
             ignore_outliners dictates whether outliers should be ignored when doing the rescaling.
             If ignore_outliers=float("inf") (this is default), then outliers will never be ignored.
@@ -192,11 +192,11 @@ class CalibrationParameters:
 
         return self
 
-    def calibrata_rating(self, r, y, clip_endpoints=(-float('inf'), float('inf'))):
-        """calibrata_rating.
+    def calibrate_rating(self, r, y, clip_endpoints=(-float('inf'), float('inf'))):
+        """calibrate_rating.
 
-        Computes xi_r(y). See the report for more details.
-        Given a reviewer r and a rating y that they gave, xi_r(y)
+        Computes sigma_r(y). See the report for more details.
+        Given a reviewer r and a rating y that they gave, sigma_r(y)
         is their calibrated rating.
 
         Parameters
@@ -206,13 +206,13 @@ class CalibrationParameters:
         y : float.
             Rating
         clip_endpionts : tuple of two floats (default (-inf, inf)).
-            If xi_r(y) > clip_endpoints[1], then this function returns clip_endpoints[1].
-            If xi_r(y) < clip_endpoints[0], then this function returns clip_endpoints[0].
+            If sigma_r(y) > clip_endpoints[1], then this function returns clip_endpoints[1].
+            If sigma_r(y) < clip_endpoints[0], then this function returns clip_endpoints[0].
             By default, clip_endpoints = (-float('inf'), float('inf')) so that no clipping occurs.
 
         Returns
         -------
-        xi_r(y) : float.
+        sigma_r(y) : float.
             See the report for details.
 
         """
@@ -224,13 +224,13 @@ class CalibrationParameters:
             )
         )
 
-    def uncalibrata_rating(self, r, y):
-        """uncalibrata_rating.
+    def uncalibrate_rating(self, r, y):
+        """uncalibrate_rating.
 
-        Computes xi_r^{-1}(y). See the report for more details.
-        Given a reviewer r and a rating y that they gave, xi_r(y)
+        Computes sigma_r^{-1}(y). See the report for more details.
+        Given a reviewer r and a rating y that they gave, sigma_r(y)
         is their calibrated rating. Hence, given a calibrated rating y
-        and a reviewer r, xi_r^{-1](y) is what reviewer r rated.
+        and a reviewer r, sigma_r^{-1](y) is what reviewer r rated.
 
         Parameters
         ----------
@@ -241,7 +241,7 @@ class CalibrationParameters:
 
         Returns
         -------
-        xi_r^{-1}(y) : float.
+        sigma_r^{-1}(y) : float.
             See the report for details.
 
         """
@@ -469,25 +469,25 @@ class CalibrationParameters:
 
         Returns
         -------
-        rates : dict.
+        bs : dict.
             Dictionary mapping reviewers r to their respective b_r.
             See the report for more details.
 
         """
         return {r: self.parameters[('b', r)] for r in self.R}
 
-    def set_reviewer_offsets(self, cs):
+    def set_reviewer_offsets(self, bs):
         """set_reviewer_offsets.
 
-        Set the internal parameter of reviewer r's offset to be cs[r].
+        Set the internal parameter of reviewer r's offset to be bs[r].
 
         Parameters
         ----------
-        cs : dict.
-             cs[r] is a float.
+        bs : dict.
+             bs[r] is a float.
 
         """
-        for r, b in cs.items():
+        for r, b in bs.items():
             self.parameters[('b', r)] = b
             self.R.add(r)
 
@@ -522,24 +522,24 @@ class CalibrationParameters:
 
         Returns
         -------
-        es : dict.
-            es[r] is a float.
+        aas : dict.
+            aas[r] is a float.
 
         """
         return {r: self.parameters[('a', r)] for r in self.R}
 
-    def set_reviewer_scales(self, es):
+    def set_reviewer_scales(self, aas):
         """set_reviewer_scales.
 
-        Set the internal parameter of reviewer r's scale to be es[r].
+        Set the internal parameter of reviewer r's scale to be aas[r].
 
         Parameters
         ----------
-        es : dict.
-            es[r] is a float
+        aas : dict.
+            aas[r] is a float
 
         """
-        for r, a in es.items():
+        for r, a in aas.items():
             self.parameters[('a', r)] = a
             self.R.add(r)
 
