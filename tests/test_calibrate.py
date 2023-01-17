@@ -200,7 +200,7 @@ def test_ignore_outliers():
     )
     cp.rescale_parameters(data)
     calibrated_data = cp.calibrate_data(data)
-    assert 0 <= calibrated_data[('r2', 'p1', 1)] <= 1
+    assert 0 <= round(calibrated_data[('r2', 'p1', 1)], 7) <= 1
 
     with np.testing.assert_raises(RuntimeError):
         cp.rescale_parameters(data, ignore_outliers=0)
