@@ -1,8 +1,8 @@
 rcal
 ====
 
-.. image:: https://github.com/jtiosue/rcal/workflows/build/badge.svg?branch=main
-    :target: https://github.com/jtiosue/rcal/actions/workflows/build.yml
+.. image:: https://github.com/jtiosue/rcal/workflows/build/badge.svg?branch=old
+    :target: https://github.com/jtiosue/rcal/actions/workflows/build.yml?query=branch%3Aold
     :alt: GitHub Actions CI
 
 Calibrating reviews from multiple reviewers over the course of multiple days. See the `report <https://github.com/jtiosue/rcal/blob/main/report/review_calibration.pdf>`_ for details.
