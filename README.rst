@@ -6,7 +6,7 @@ rcal
     :alt: GitHub Actions CI
 
 
-Calibrating reviews from multiple reviewers over the course of multiple days. See the `report <https://github.com/jtiosue/rcal/blob/main/report/review_calibration.pdf>`_ for details.
+Calibrating reviews from multiple reviewers over the course of multiple days. See the `report <https://github.com/jtiosue/rcal/blob/master/report/review_calibration.pdf>`_ for details.
 
 
 
@@ -34,7 +34,7 @@ Or:
 Example usage
 -------------
 
-See the `notebook examples <https://github.com/jtiosue/rcal/tree/main/examples>`_ for a detailed example. Here we do a quick *Hello World* example.
+See the `notebook examples <https://github.com/jtiosue/rcal/tree/master/examples>`_ for a detailed example. Here we do a quick *Hello World* example.
 
 .. code:: python
     

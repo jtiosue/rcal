@@ -27,7 +27,7 @@ class CalibrationParameters:
     """CalibrationParameters.
 
     Class to manage the calibration parameters 
-    alpha_p, beta_p, c_r, and e_r. See the report for more details.
+    alpha_p, beta_p, b_r, and a_r. See the report for more details.
 
     """
 
@@ -192,8 +192,8 @@ class CalibrationParameters:
 
         return self
 
-    def calibrate_rating(self, r, y, clip_endpoints=(-float('inf'), float('inf'))):
-        """calibrate_rating.
+    def calibrata_rating(self, r, y, clip_endpoints=(-float('inf'), float('inf'))):
+        """calibrata_rating.
 
         Computes xi_r(y). See the report for more details.
         Given a reviewer r and a rating y that they gave, xi_r(y)
@@ -224,8 +224,8 @@ class CalibrationParameters:
             )
         )
 
-    def uncalibrate_rating(self, r, y):
-        """uncalibrate_rating.
+    def uncalibrata_rating(self, r, y):
+        """uncalibrata_rating.
 
         Computes xi_r^{-1}(y). See the report for more details.
         Given a reviewer r and a rating y that they gave, xi_r(y)
@@ -250,10 +250,12 @@ class CalibrationParameters:
     def improvement_function(self, p, d, final_day=0):
         """improvement_function.
 
-        Computes f_p(d). See the report for more details.
+        Computes alpha_p final_day - f_p(d). See the report for more details.
         Given a person p and a day d, f_p(d) is the improvement
-        function f_p(d) = alpha_p (final_day - d), where alpha_p is
-        the improvement rate of person p.
+        function f_p(d) = alpha_p d, where alpha_p is
+        the improvement rate of person p. Thus, alpha_p final_day - f_p(d)
+        is intuitively the amount that person p improves from day d to day
+        final_day.
 
         Parameters
         ----------
@@ -269,7 +271,7 @@ class CalibrationParameters:
 
         Returns
         -------
-        f_p(d) : float.
+        alpha_p final_day - f_p(d) : float.
             See the report for details.
 
         """
@@ -381,7 +383,7 @@ class CalibrationParameters:
 
         Returns
         -------
-        c_r : float.
+        b_r : float.
             See the report for more details.
 
         """
@@ -413,7 +415,7 @@ class CalibrationParameters:
 
         Returns
         -------
-        e_r : float.
+        a_r : float.
             See the report for more details.
 
         """
@@ -468,7 +470,7 @@ class CalibrationParameters:
         Returns
         -------
         rates : dict.
-            Dictionary mapping reviewers r to their respective c_r.
+            Dictionary mapping reviewers r to their respective b_r.
             See the report for more details.
 
         """
