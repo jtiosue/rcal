@@ -24,16 +24,33 @@ import numpy as np
 def test_errors():
 
     data = {
-        ('r1', 'p1', 0): 1.
+        ('r1', 'p1', 0): 1,
+        ('r2', 'p2', 0): 2,
     }
 
     # singular matrix
     with np.testing.assert_warns(RcalWarning):
-        calibrate_parameters(data)
+        cp = calibrate_parameters(data)
 
-    cp = CalibrationParameters(
-        {('a', 'r1'): 1, ('b', 'r1'): 1, ('alpha', 'p1'): 0}
-    )
+    assert cp == CalibrationParameters({
+        ('a', 'r1'): 1, ('b', 'r1'): 0, ('alpha', 'p1'): 0, ('beta', 'p1'): 1,
+        ('a', 'r2'): 1, ('b', 'r2'): 0, ('alpha', 'p2'): 0, ('beta', 'p2'): 2
+    })
+
+    data = {
+        ('r1', 'p1', 0): 1,
+        ('r2', 'p2', 0): 1,
+    }
+
+    # singular matrix
+    with np.testing.assert_warns(RcalWarning):
+        cp = calibrate_parameters(data)
+
+    assert cp == CalibrationParameters({
+        ('a', 'r1'): 1, ('b', 'r1'): 0, ('alpha', 'p1'): 0, ('beta', 'p1'): 1,
+        ('a', 'r2'): 1, ('b', 'r2'): 0, ('alpha', 'p2'): 0, ('beta', 'p2'): 1
+    })
+
     with np.testing.assert_warns(RcalWarning):
         cp.rescale_parameters(data)
 
