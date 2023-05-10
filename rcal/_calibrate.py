@@ -261,14 +261,13 @@ def calibrate_parameters(data, rating_delta=None, lam=1e-5):
             c[row] = 0.
 
     # if a reviewer has only one review, then set their slope to 0.
-    # for r in allR:
-    #     if len(P[r]) == 1:
-    for r in filter(lambda x: len(P[x]) == 1, allR):
-        row = indices[('a', r)]
-        for col in indices.values():
-            A[row, col] = 0.
-        A[row, row] = 1.
-        c[row] = 0.
+    for r in allR:
+        if len(set(data[(r, p, d)] for p in P[r] for d in D[(r, p)])) == 1:
+            row = indices[('a', r)]
+            for col in indices.values():
+                A[row, col] = 0.
+            A[row, row] = 1.
+            c[row] = 0.
 
     # solve the system
     try:
