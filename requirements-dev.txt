@@ -2,4 +2,4 @@ numpy
 pytest
 setuptools
 twine
-wheel
+build
