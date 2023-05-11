@@ -20,5 +20,5 @@ test:
 # 	$(python_cmd) -m pydocstyle convention=numpy rcal
 # 	$(python_cmd) -m pytest --codestyle --cov=./ --cov-report=xml
 	$(python_cmd) -m pytest
-	$(python_cmd) setup.py sdist bdist_wheel
+	$(python_cmd) -m build
 	$(python_cmd) -m twine check dist/*

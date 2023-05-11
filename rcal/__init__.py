@@ -18,7 +18,6 @@ See the rcal.calibrate_parameters function and docstring.
 
 """
 
-from ._version import *
 from ._warn import *
 from ._calibration_parameters import *
 from ._calibrate import *
