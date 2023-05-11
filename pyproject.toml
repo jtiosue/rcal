@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rcal"
+authors = [
+    {name = "Joseph T. Iosue", email = "jtiosue@gmail.com"},
+]
+description = "A package for calibrating reviews"
+readme = "README.rst"
+requires-python = ">=3.7"
+license = {text = "Apache"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+dependencies = ["numpy"]
+version = "0.0.0"
