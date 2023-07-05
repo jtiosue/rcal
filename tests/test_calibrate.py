@@ -16,7 +16,7 @@
 Contains tests for the calibrate_parameters function.
 """
 
-from rcal import calibrate_parameters, RcalWarning, CalibrationParameters
+from rcal import calibrate_parameters, RcalException, CalibrationParameters
 import random
 import numpy as np
 
@@ -29,13 +29,8 @@ def test_errors():
     }
 
     # singular matrix
-    with np.testing.assert_warns(RcalWarning):
+    with np.testing.assert_raises(RcalException):
         cp = calibrate_parameters(data)
-
-    assert cp == CalibrationParameters({
-        ('a', 'r1'): 1, ('b', 'r1'): 0, ('alpha', 'p1'): 0, ('beta', 'p1'): 1,
-        ('a', 'r2'): 1, ('b', 'r2'): 0, ('alpha', 'p2'): 0, ('beta', 'p2'): 2
-    })
 
     data = {
         ('r1', 'p1', 0): 1,
@@ -43,15 +38,15 @@ def test_errors():
     }
 
     # singular matrix
-    with np.testing.assert_warns(RcalWarning):
+    with np.testing.assert_raises(RcalException):
         cp = calibrate_parameters(data)
 
-    assert cp == CalibrationParameters({
+    cp = CalibrationParameters({
         ('a', 'r1'): 1, ('b', 'r1'): 0, ('alpha', 'p1'): 0, ('beta', 'p1'): 1,
         ('a', 'r2'): 1, ('b', 'r2'): 0, ('alpha', 'p2'): 0, ('beta', 'p2'): 1
     })
 
-    with np.testing.assert_warns(RcalWarning):
+    with np.testing.assert_raises(RcalException):
         cp.rescale_parameters(data)
 
 
@@ -224,5 +219,5 @@ def test_ignore_outliers():
 def test_error():
 
     cp = CalibrationParameters({})
-    with np.testing.assert_warns(RcalWarning):
+    with np.testing.assert_raises(RcalException):
         cp.rescale_parameters({})

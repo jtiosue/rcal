@@ -19,7 +19,7 @@ Contains the CalibrationParameters class.
 """
 
 
-from . import RcalWarning
+from . import RcalException
 import numpy as np
 
 
@@ -146,23 +146,20 @@ class CalibrationParameters:
         vals.sort()
 
         if not vals:
-            RcalWarning.warn("Cannot rescale based on no data")
-            return self
+            raise RcalException("Cannot rescale based on no data")
 
         y0, y1 = vals[0], vals[-1]
 
         if abs(y1 - y0) < 1e-15:
-            RcalWarning.warn("Calibrated reviews are too close together to rescale")
-            return self
+            raise RcalException("Calibrated reviews are too close together to rescale")
 
         # remove outliers
         if ignore_outliers <= 0:
-            raise RuntimeError("ignore_outliers must be positive")
+            raise RcalException("ignore_outliers must be positive")
         elif ignore_outliers != float("inf"):
             mean_rating, std_rating = np.mean(vals), np.std(vals)
             if std_rating < 1e-15:
-                RcalWarning.warn("Standard deviation is too small to ignore outliers")
-                return self
+                raise RcalException("Standard deviation is too small to ignore outliers")
             i = 0
             while (mean_rating - y0) / std_rating > ignore_outliers:
                 i += 1
@@ -174,8 +171,7 @@ class CalibrationParameters:
 
             # check again
             if abs(y1 - y0) < 1e-15:
-                RcalWarning.warn("Calibrated reviews are too close together to rescale")
-                return self
+                raise RcalException("Calibrated reviews are too close together to rescale")
 
         # rescale
 

@@ -19,7 +19,7 @@ Contains the main functionality of rcal; calibrate_parameters.
 """
 
 import numpy as np
-from . import RcalWarning, CalibrationParameters
+from . import RcalException, CalibrationParameters
 
 
 def calibrate_parameters(data, rating_delta=None, lam=1e-5):
@@ -274,13 +274,14 @@ def calibrate_parameters(data, rating_delta=None, lam=1e-5):
         z = np.linalg.solve(A, c).tolist()
         params = {k: z[v] for k, v in indices.items()}
     except np.linalg.LinAlgError as e:
-        RcalWarning.warn(str(e))
-        params = {}
-        for r in allR:
-            params[('a', r)] = 1.
-            params[('b', r)] = 0.
-        for p in allP:
-            params[('alpha', p)] = 0.
-            params[('beta', p)] = float(np.mean([data[(r, p, d)] for r in R[p] for d in D[(r, p)]]))
+        raise RcalException(str(e))
+        # RcalWarning.warn(str(e))
+        # params = {}
+        # for r in allR:
+        #     params[('a', r)] = 1.
+        #     params[('b', r)] = 0.
+        # for p in allP:
+        #     params[('alpha', p)] = 0.
+        #     params[('beta', p)] = float(np.mean([data[(r, p, d)] for r in R[p] for d in D[(r, p)]]))
 
     return CalibrationParameters(params)

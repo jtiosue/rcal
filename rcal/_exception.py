@@ -21,22 +21,9 @@ This file contains warning functionality to standardize rcal's warnings.
 import warnings
 
 
-class RcalWarning(UserWarning):
-    """RcalWarning.
+class RcalException(Exception):
+    """RcalException.
 
-    Warning type to standardize rcal's warnings. Warn with
-    ``RcalWarning.warn("message")``.
+    Exception type to standardize rcal's exceptions.
 
     """
-
-    @classmethod
-    def warn(cls, message):
-        """warn.
-
-        Parameters
-        ----------
-        message : str.
-            Message to warn with.
-
-        """
-        warnings.warn(message, cls, 3)
