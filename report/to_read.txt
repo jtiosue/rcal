@@ -1,0 +1,7 @@
+Need to read these papers and compare my method to it.
+
+- https://arxiv.org/pdf/2110.12607
+- https://mlg.eng.cam.ac.uk/hong/unpublished/nips-review-model.pdf
+- http://mpref2012.lip6.fr/proceedings/RoosMPREF2012.pdf
+- https://arxiv.org/pdf/2201.11308
+
