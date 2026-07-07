@@ -69,3 +69,10 @@ See the `notebook examples <https://github.com/jtiosue/rcal/tree/master/examples
     
     # get the improvement rates
     print(cp.improvement_rates())
+
+
+To do
+-----
+
+There is singular behavior sometimes that I hadn't noticed. I manually choose a reviewer to set their offset to zero, b=0, to fix the overall translation symmetry. But if that reviewer already has their scale set to zero, a=0, because eg they have rated all the same numbers, then setting their b=0 seems to cause some problems sometimes. 
+There is nondeterminism because I am using Python's hash when picking an ordering of reviewers. I should fix this. 
